@@ -1,0 +1,22 @@
+[project]
+name = "signal-ai"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "cornellshakh",email = "kornelshakh@proton.me"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv",
+    "signalbot",
+]
+aiohttp = "^3.13.1"
+apscheduler = "^3.11.0"
+pydantic = "^2.12.3"
+websockets = "^15.0.1"
+phonenumbers = "^9.0.17"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

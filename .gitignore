@@ -1,0 +1,23 @@
+# Python-specific ignores
+*.pyc
+__pycache__/
+.venv/
+venv/
+dist/
+build/
+
+# VS Code-specific ignores
+.vscode/
+
+# Temporary files
+*.tmp
+*.swp
+
+# Poetry-specific ignores
+poetry.lock
+
+# Environment file
+.env
+
+# Documentation
+docs/
