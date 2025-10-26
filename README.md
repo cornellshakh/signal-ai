@@ -80,7 +80,7 @@ The `scripts/` directory contains the following scripts:
 - `setup.sh`: Sets up the bot, creating a virtual environment and installing dependencies.
 - `start.sh`: Starts the bot.
 - `status.sh`: Shows the status of the bot.
-- `stop`.sh`: Stops the bot.
+- `stop.sh`: Stops the bot.
 
 ## Troubleshooting Tips
 
