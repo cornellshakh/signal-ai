@@ -1,31 +1,16 @@
-# Contributing to Signal Bot
+# Contributing
 
-First off, thank you for considering contributing to Signal Bot! It's people like you that make open source such a great community.
+We welcome contributions to this project. Please follow these guidelines to ensure a smooth process.
 
-## How Can I Contribute?
+## Reporting Issues
 
-### Reporting Bugs
+- **Bugs:** If you find a bug, open an issue and provide a clear title, a detailed description with steps to reproduce, and any relevant logs or screenshots.
+- **Enhancements:** For new features or improvements, open an issue to discuss the idea before implementation.
 
-If you find a bug, please open an issue and provide the following information:
+## Pull Requests
 
-- A clear and descriptive title.
-- A detailed description of the problem, including steps to reproduce it.
-- Any relevant logs or screenshots.
-
-### Suggesting Enhancements
-
-If you have an idea for a new feature or an improvement to an existing one, please open an issue to discuss it. This allows us to coordinate our efforts and prevent duplicating work.
-
-### Pull Requests
-
-We welcome pull requests! If you'd like to contribute code, please follow these steps:
-
-1.  **Fork the repository** and create your branch from `main`.
-2.  **Set up your development environment** by following the instructions in the `README.md`.
-3.  **Make your changes** and ensure the code adheres to the project's style.
-4.  **Run the checks** using `./scripts/check.sh` to ensure that linting, formatting, and type checks all pass.
-5.  **Submit a pull request** with a clear description of your changes.
-
-## Code of Conduct
-
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
+1.  **Fork the repository** and create a new branch from `main`.
+2.  **Set up the development environment** as described in the `README.md`.
+3.  **Make your changes.**
+4.  **Run all checks** with `./scripts/check.sh` to ensure the code is clean.
+5.  **Submit a pull request** with a clear description of the changes.
