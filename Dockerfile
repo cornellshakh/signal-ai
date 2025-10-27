@@ -19,6 +19,6 @@ RUN apt-get update && apt-get install -y curl && \
     npm install -g open-websearch
 
 # Copy the rest of the application code
-COPY . .
+COPY ./src/signal_ai /app/signal_ai
 
-CMD ["python", "src/bot.py"]
+CMD ["python", "-m", "signal_ai.bot"]
