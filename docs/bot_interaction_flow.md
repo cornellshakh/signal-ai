@@ -161,6 +161,47 @@ A three-stage feedback system provides real-time updates for any AI-related task
 2.  A `⏳` reaction is added to the message when the AI call is initiated.
 3.  The `⏳` reaction is replaced with `✅` on success or `❌` on failure, accompanied by a descriptive error message if applicable.
 
-## Future Evolution: The "Intelligent Summarizer"
+## Technical Implementation Blueprint
 
-To address the limitation of short-term memory, the planned next step is the **"Intelligent Summarizer" model**. This will involve the bot automatically summarizing inactive conversations and storing the summary. When the conversation resumes, this summary will be used as long-term context, allowing the bot to "remember" key details from past discussions.
+This section outlines the technical architecture for the bot, including the persistence layer and code structure, designed to be robust, scalable, and aligned with our development philosophy.
+
+### 1. Persistence Layer: TinyDB
+
+To ensure data is managed safely and efficiently, the bot will use the **TinyDB** library. This provides a lightweight, file-based database that is simple to manage while preventing common issues like data corruption from concurrent writes.
+
+- **Database File:** All state information (configurations, to-do lists, summaries) for all chats will be stored in a single file: `data/db.json`.
+- **Performance:** To ensure high performance under load, the database will be initialized with TinyDB's `CachingMiddleware`. This keeps a hot cache of the data in memory for near-instantaneous reads and handles writing to disk intelligently.
+- **Data Integrity:** The `PersistenceManager` will implement a simple hourly backup of the `db.json` file to mitigate the risk of data loss in the event of a critical failure.
+
+### 2. Application Structure
+
+The codebase will be organized for modularity and clarity, following the "Single Responsibility" principle. This makes the bot easy to maintain and extend.
+
+**Proposed Directory Structure:**
+
+```
+src/signal_ai/
+├── bot.py             # Main application entry point.
+|
+├── core/
+│   ├── context.py     # Defines the `Context` data model.
+│   └── persistence.py # The `PersistenceManager` class, handling all DB logic.
+|
+└── commands/
+    ├── help.py          # Logic for the `help` command.
+    ├── config.py        # Logic for the `config` command.
+    ├── todo.py          # Logic for the `todo` command.
+    └── remind.py        # Logic for the `remind` command.
+```
+
+### 3. AI Cost Optimization: The "Intelligent Summarizer"
+
+The bot's interaction with the Gemini API is designed to be cost-effective.
+
+- **Context Management:** The bot maintains a short-term `conversation_log` and a long-term `conversation_summary` for each chat.
+- **Summarization Task:** A background process will periodically use a cost-effective AI model (e.g., Gemini Flash) to summarize the `conversation_log`, save it to the `conversation_summary`, and then clear the log.
+- **Optimized Prompts:** When generating responses, the bot sends a highly efficient prompt containing the long-term summary and only the most recent messages, dramatically reducing token usage.
+
+## Future Evolution
+
+The architecture is designed to be extensible. Future features will be added as new modules in the `commands/` directory, and the `Context` object can be expanded to store new types of data as needed.
