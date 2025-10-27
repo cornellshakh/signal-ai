@@ -25,5 +25,6 @@ services:
       SIGNAL_SERVICE: signal-cli-rest-api:8080
       PHONE_NUMBER: ${PHONE_NUMBER} # Replace with your Signal bot's phone number
     volumes:
+      - ./src:/app/src
       - ./signal-cli-config:/home/.local/share/signal-cli
     restart: unless-stopped

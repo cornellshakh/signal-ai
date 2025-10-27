@@ -23,16 +23,48 @@ A bot that uses the `signal-cli-rest-api` container to interact with the Signal 
     ./scripts/link.sh
     ```
 
-4.  Open <http://127.0.0.1:8080/v1/qrcodelink?device_name=local> in your browser to link your account with the `signal-cli-rest-api` server.
+4.  Open <http://127.0.0.1:8080/v1/qrcodelink?device_name=local> in your browser to link your account with the `signal-cli-rest-api` server. After you have successfully linked your device, you can stop the `link.sh` script (e.g., with Ctrl+C).
 
-5.  Configure VS Code to use the project's virtual environment
+5.  Start the service in `json-rpc` mode for the bot to use:
 
-6.  Copy the `.env.example` file to `.env` and rename it to `.env`. Configure the environment variables in the `.env` file:
+    ```bash
+    ./scripts/start.sh
+    ```
+
+6.  Configure VS Code to use the project's virtual environment
+
+7.  Copy the `.env.example` file to `.env` and rename it to `.env`. Configure the environment variables in the `.env` file:
 
     ```bash
     cp .env.example .env
     # Edit .env with your configuration
     ```
+
+## Docker Compose Setup
+
+For a containerized setup, you can use Docker Compose to run the entire application.
+
+1.  **Configure your environment:**
+
+    Copy the `.env.example` file to `.env` and add your Signal phone number to it.
+
+    ```bash
+    cp .env.example .env
+    ```
+
+2.  **Build and start the services:**
+
+    ```bash
+    docker-compose up --build
+    ```
+
+    This command will build the Docker images and start both the `signal-cli-rest-api` and the `bot` services.
+
+3.  **Link to Signal:**
+
+    Once the services are running, you need to link the bot to your Signal account. You can do this by opening the following link in your browser:
+
+    <http://127.0.0.1:8080/v1/qrcodelink?device_name=local>
 
 ## Usage Instructions
 
