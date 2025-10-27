@@ -37,8 +37,10 @@ This document outlines the core principles and standards that guide our developm
 
   - **Single Responsibility:** One file, one purpose. One function, one action.
   - **Concise Functions:** Keep functions short and focused (ideally under 50 lines).
+  - **File Length:** Files should not exceed 200 lines to maintain readability and focus.
 
 - **Clarity:**
   - **Self-Documenting Code:** Write code that is easy to understand.
+  - **Boring Code:** Prefer straightforward, predictable code over clever or complex solutions. Our code should be "boring" and easy to follow.
   - **Meaningful Comments:** Comments explain the "why," not the "what."
   - **Fail Loudly:** Handle errors explicitly and never silence them.
