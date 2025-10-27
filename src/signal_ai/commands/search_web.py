@@ -1,12 +1,14 @@
-import logging
-import json
 import asyncio
-from signalbot import Command, Context, regex_triggered
+import json
+import logging
+
 from dotenv import load_dotenv
+from signalbot import Command, Context, regex_triggered
 
 load_dotenv()
 
 log = logging.getLogger(__name__)
+
 
 class SearchWebCommand(Command):
     def describe(self) -> str:
@@ -17,9 +19,9 @@ class SearchWebCommand(Command):
         """Search the web and send the results."""
         log.info("!!!!!!!!!!!! SEARCH COMMAND HANDLE !!!!!!!!!!!!")
         log.info(f"Received message: {c.message.text}")
-        
+
         # Adjust query parsing for regex
-        parts = c.message.text.split(' ', 1)
+        parts = c.message.text.split(" ", 1)
         query = parts[1].strip() if len(parts) > 1 else None
         log.info(f"Parsed query: {query}")
 
@@ -29,15 +31,15 @@ class SearchWebCommand(Command):
 
         try:
             log.info("Attempting to use Open-WebSearch via stdio")
-            
+
             cmd = "DEFAULT_SEARCH_ENGINE=duckduckgo open-websearch"
-            
+
             proc = await asyncio.create_subprocess_shell(
                 cmd,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env={"MODE": "stdio"}
+                env={"MODE": "stdio"},
             )
 
             await asyncio.sleep(3)  # Give the server a moment to initialize
@@ -45,17 +47,13 @@ class SearchWebCommand(Command):
             request = {
                 "jsonrpc": "2.0",
                 "method": "search",
-                "params": {
-                    "query": query,
-                    "limit": 3,
-                    "engines": ["duckduckgo"]
-                },
-                "id": 1
+                "params": {"query": query, "limit": 3, "engines": ["duckduckgo"]},
+                "id": 1,
             }
-            
+
             if proc.stdin:
                 log.info(f"Sending request: {json.dumps(request)}")
-                proc.stdin.write(json.dumps(request).encode() + b'\n')
+                proc.stdin.write(json.dumps(request).encode() + b"\n")
                 await proc.stdin.drain()
             else:
                 raise Exception("Failed to get stdin for subprocess")
@@ -72,10 +70,10 @@ class SearchWebCommand(Command):
                 # Find the JSON part of the response
                 json_response_str = None
                 for line in response_data.decode().splitlines():
-                    if line.strip().startswith('{'):
+                    if line.strip().startswith("{"):
                         json_response_str = line
                         break
-                
+
                 if json_response_str:
                     response = json.loads(json_response_str)
                     if "result" in response:
@@ -88,7 +86,9 @@ class SearchWebCommand(Command):
                         else:
                             await c.send("No results found.")
                     elif "error" in response:
-                        error_message = response.get('error', {}).get('message', 'Unknown error')
+                        error_message = response.get("error", {}).get(
+                            "message", "Unknown error"
+                        )
                         await c.send(f"Error from search tool: {error_message}")
                     else:
                         await c.send("Unknown response from search tool.")

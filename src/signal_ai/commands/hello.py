@@ -1,7 +1,9 @@
 import logging
+
 from signalbot import Command, Context, triggered
 
 log = logging.getLogger(__name__)
+
 
 class HelloCommand(Command):
     def describe(self) -> str:

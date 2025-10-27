@@ -19,6 +19,7 @@ from .commands.search_web import SearchWebCommand
 
 
 def main() -> None:
+    """Main function to run the bot."""
     try:
         log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
         try:
@@ -28,7 +29,9 @@ def main() -> None:
             log_level = logging.INFO
 
         # Configure logging for all modules
-        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.basicConfig(
+            level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         signal_service = os.environ.get("SIGNAL_SERVICE")
         phone_number = os.environ.get("PHONE_NUMBER")
@@ -39,7 +42,7 @@ def main() -> None:
         config = {
             "signal_service": signal_service,
             "phone_number": phone_number,
-            "download_attachments": True
+            "download_attachments": True,
         }
         bot = SignalBot(config)
 
@@ -65,7 +68,6 @@ def main() -> None:
         bot.register(ConvertCommand())
         bot.register(HelloCommand())
         bot.register(HelpCommand())
-
 
         bot.start()
 

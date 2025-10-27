@@ -1,5 +1,6 @@
 from signalbot import Command, Context
 
+
 class HelpCommand(Command):
     def describe(self) -> str:
         return "!help - Show this help message"

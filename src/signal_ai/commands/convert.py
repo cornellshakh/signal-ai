@@ -1,9 +1,11 @@
 import logging
 from pathlib import Path
-from signalbot import Command, Context, regex_triggered
+
 from markitdown import MarkItDown
+from signalbot import Command, Context, regex_triggered
 
 log = logging.getLogger(__name__)
+
 
 class ConvertCommand(Command):
     """A command to convert an attached file or message text to Markdown using MarkItDown.
@@ -18,15 +20,21 @@ class ConvertCommand(Command):
         log.info(f"Attachments: {c.message.attachments_local_filenames}")
 
         source_to_convert = None
-        
+
         # Prioritize text/URL argument after the command
-        message_text = c.message.text.split(' ', 1)[1] if len(c.message.text.split()) > 1 else None
+        message_text = (
+            c.message.text.split(" ", 1)[1]
+            if len(c.message.text.split()) > 1
+            else None
+        )
         if message_text:
             source_to_convert = message_text
         # If no text argument, check for an attachment
         elif c.message.attachments_local_filenames:
             attachment_filename = c.message.attachments_local_filenames[0]
-            source_to_convert = Path("/home/.local/share/signal-cli/attachments") / attachment_filename
+            source_to_convert = (
+                Path("/home/.local/share/signal-cli/attachments") / attachment_filename
+            )
 
         if source_to_convert:
             try:
@@ -38,4 +46,6 @@ class ConvertCommand(Command):
                 log.exception(f"Error converting: {e}")
                 await c.send(f"Error converting: {e}")
         else:
-            await c.send("Please provide a file, URL, or text to convert after the !convert command.")
+            await c.send(
+                "Please provide a file, URL, or text to convert after the !convert command."
+            )
