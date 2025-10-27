@@ -1,8 +1,37 @@
 # Signal Bot
 
-A bot that uses the `signal-cli-rest-api` container to interact with the Signal service.
+[![CI](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Quick Start (Recommended)
+A bot that uses the `signal-cli-rest-api` container to interact with the Signal service. This bot is designed to be easily extensible, allowing you to add your own commands and features.
+
+## Table of Contents
+
+- [Signal Bot](#signal-bot)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+      - [Step 1: Clone and Configure](#step-1-clone-and-configure)
+      - [Step 2: Link to Signal](#step-2-link-to-signal)
+      - [Step 3: Run the Bot](#step-3-run-the-bot)
+  - [Usage](#usage)
+    - [Available Commands](#available-commands)
+  - [Managing the Bot](#managing-the-bot)
+  - [Development and Contributing](#development-and-contributing)
+    - [Code Quality](#code-quality)
+  - [Troubleshooting](#troubleshooting)
+  - [License](#license)
+
+## Features
+
+- **Easy to Use:** Simple helper scripts for managing the application lifecycle.
+- **Extensible:** Add your own commands by creating new Python files.
+- **Dockerized:** Designed to be run with Docker Compose for easy setup and deployment.
+- **Code Quality:** Uses `ruff` for linting and formatting, and `mypy` for static type checking.
+
+## Getting Started
 
 This project is designed to be run with Docker Compose, using simple helper scripts to manage the application.
 
@@ -11,7 +40,9 @@ This project is designed to be run with Docker Compose, using simple helper scri
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-### Step 1: Clone and Configure
+### Installation
+
+#### Step 1: Clone and Configure
 
 First, clone the repository and set up your environment configuration.
 
@@ -28,7 +59,7 @@ Next, you **must** edit the `.env` file and add the phone number of the Signal a
 PHONE_NUMBER=+1234567890
 ```
 
-### Step 2: Link to Signal
+#### Step 2: Link to Signal
 
 You only need to do this once. This script will start the Signal service, allow you to scan a QR code to link your device, and then shut down.
 
@@ -38,7 +69,7 @@ You only need to do this once. This script will start the Signal service, allow 
 
 This will prompt you to open a URL in your browser (e.g., `http://127.0.0.1:8080/v1/qrcodelink...`). Scan the QR code with the Signal app on your phone. Once it's linked, you can stop the script by pressing `Ctrl+C` in the terminal.
 
-### Step 3: Run the Bot
+#### Step 3: Run the Bot
 
 Now you can build and start the bot and the Signal API service.
 
@@ -47,39 +78,6 @@ Now you can build and start the bot and the Signal API service.
 ```
 
 This command will start all services in the background. You can now send commands to your bot's phone number via Signal.
-
-## Available Commands
-
-The bot supports the following commands:
-
-- `ping`: Responds with "Pong!".
-- `reply`: Replies to the previous message.
-- `attachment`: Sends an attachment.
-- `typing`: Simulates typing.
-- `triggered`: Responds to a specific trigger.
-- `regex_triggered`: Responds to a regex trigger.
-- `edit`: Edits the previous message.
-- `delete`: Deletes the previous message.
-- `receive_delete`: Receives a delete message.
-- `styles`: Demonstrates text styles.
-
-## Managing the Bot
-
-A collection of scripts are available in the `scripts/` directory to manage the application lifecycle.
-
-- `./scripts/start.sh`: Builds and starts the bot and all related services.
-- `./scripts/stop.sh`: Stops all running services.
-- `./scripts/restart.sh`: A convenient way to stop and then immediately start the services again.
-- `./scripts/logs.sh`: Tails the logs from all running services. Use `Ctrl+C` to exit.
-- `./scripts/status.sh`: Checks the current status of the Docker containers.
-- `./scripts/link.sh`: The one-time setup script to link your bot to a Signal account.
-
-## Development and Code Quality
-
-This project uses `ruff` for linting and formatting, and `mypy` for static type checking to ensure code quality.
-
-- `./scripts/check.sh`: Runs all checks (linting, formatting, and type checking) to verify the code. This is the same script that runs in the CI pipeline, so it's a good idea to run it before pushing your changes.
-- `./scripts/format.sh`: Automatically formats the code and fixes any auto-fixable linting issues. Run this script to easily clean up your code before committing.
 
 <details>
 <summary><h3>Advanced: Running with a Local Python Environment</h3></summary>
@@ -113,8 +111,51 @@ Then, in a separate terminal, activate the virtual environment and run the Pytho
     `
 </details>
 
+## Usage
+
+### Available Commands
+
+The bot supports the following commands:
+
+- `ping`: Responds with "Pong!".
+- `reply`: Replies to the previous message.
+- `attachment`: Sends an attachment.
+- `typing`: Simulates typing.
+- `triggered`: Responds to a specific trigger.
+- `regex_triggered`: Responds to a regex trigger.
+- `edit`: Edits the previous message.
+- `delete`: Deletes the previous message.
+- `receive_delete`: Receives a delete message.
+- `styles`: Demonstrates text styles.
+
+## Managing the Bot
+
+A collection of scripts are available in the `scripts/` directory to manage the application lifecycle.
+
+- `./scripts/start.sh`: Builds and starts the bot and all related services.
+- `./scripts/stop.sh`: Stops all running services.
+- `./scripts/restart.sh`: A convenient way to stop and then immediately start the services again.
+- `./scripts/logs.sh`: Tails the logs from all running services. Use `Ctrl+C` to exit.
+- `./scripts/status.sh`: Checks the current status of the Docker containers.
+- `./scripts/link.sh`: The one-time setup script to link your bot to a Signal account.
+
+## Development and Contributing
+
+We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for more information.
+
+### Code Quality
+
+This project uses `ruff` for linting and formatting, and `mypy` for static type checking to ensure code quality.
+
+- `./scripts/check.sh`: Runs all checks (linting, formatting, and type checking) to verify the code. This is the same script that runs in the CI pipeline, so it's a good idea to run it before pushing your changes.
+- `./scripts/format.sh`: Automatically formats the code and fixes any auto-fixable linting issues. Run this script to easily clean up your code before committing.
+
 ## Troubleshooting
 
 - **Check the logs:** The first step is always to check the logs using `./scripts/logs.sh`.
 - **Verify `.env`:** Ensure the `PHONE_NUMBER` is set correctly in your `.env` file.
 - **Re-link:** If you have issues with your connection to Signal, you can try running `./scripts/link.sh` again.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
