@@ -3,12 +3,11 @@
 [![CI](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Signal bot that uses the `signal-cli-rest-api` for messaging. It is extensible, allowing for custom commands.
+A Signal bot that uses the `signal-cli-rest-api` for messaging.
 
 ## Features
 
 - **Easy Setup:** Managed with simple helper scripts.
-- **Extensible:** Add new commands by creating Python files.
 - **Dockerized:** Runs with Docker Compose.
 - **Code Quality:** Enforced with `ruff` and `mypy`.
 
