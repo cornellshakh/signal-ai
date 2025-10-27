@@ -1,13 +1,9 @@
 import logging
-import shlex
-import subprocess
-from signalbot import Command
-from markitdown import MarkItDown
 from pathlib import Path
+from signalbot import Command, Context, regex_triggered
+from markitdown import MarkItDown
 
 log = logging.getLogger(__name__)
-
-from signalbot import Command, Context, regex_triggered
 
 class ConvertCommand(Command):
     """A command to convert an attached file or message text to Markdown using MarkItDown.

@@ -1,24 +1,21 @@
-import logging  # noqa: INP001
+import logging
 import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from example.attachments import AttachmentCommand
 from example.delete import DeleteCommand
-from example.edit import EditCommand
-from example.ping import PingCommand
 from example.delete import DeleteCommand as ReceiveDeleteCommand
+from example.edit import EditCommand
+from example.multiple_triggered import TriggeredCommand
+from example.ping import PingCommand
 from example.regex_triggered import RegexTriggeredCommand
 from example.reply import ReplyCommand
 from example.styles import StylesCommand
-from example.multiple_triggered import TriggeredCommand as TriggeredCommand
-from example.typing import TypingCommand
-from src.commands.convert import ConvertCommand
-from src.commands.search_web import SearchWebCommand
-from src.commands.hello import HelloCommand
-from src.commands.help import HelpCommand
 from signalbot import SignalBot
+
+from .commands.convert import ConvertCommand
+from .commands.hello import HelloCommand
+from .commands.help import HelpCommand
+from .commands.search_web import SearchWebCommand
 
 
 def main() -> None:
