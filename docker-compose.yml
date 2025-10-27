@@ -16,22 +16,11 @@ services:
       timeout: 5s
       retries: 3
 
-  open-web-search:
-    image: ghcr.io/aas-ee/open-web-search:latest
-    ports:
-      - "3000:3000"
-    environment:
-      ENABLE_CORS: "true"
-      CORS_ORIGIN: "*"
-    restart: unless-stopped
-
   bot:
     build: .
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy
-      open-web-search:
-        condition: service_started
     environment:
       SIGNAL_SERVICE: signal-cli-rest-api:8080
       PHONE_NUMBER: ${PHONE_NUMBER} # Replace with your Signal bot's phone number

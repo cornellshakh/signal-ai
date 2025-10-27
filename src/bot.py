@@ -14,22 +14,24 @@ from example.reply import ReplyCommand
 from example.styles import StylesCommand
 from example.multiple_triggered import TriggeredCommand as TriggeredCommand
 from example.typing import TypingCommand
-from example.convert import ConvertCommand
+from src.commands.convert import ConvertCommand
 from src.commands.search_web import SearchWebCommand
 from src.commands.hello import HelloCommand
-from signalbot import SignalBot, enable_console_logging
+from src.commands.help import HelpCommand
+from signalbot import SignalBot
 
 
 def main() -> None:
     try:
-        log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+        log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
         try:
-            log_level = getattr(logging, log_level)
+            log_level = getattr(logging, log_level_str)
         except AttributeError:
-            logging.warning(f"Invalid log level: {log_level}, defaulting to INFO")
+            logging.warning(f"Invalid log level: {log_level_str}, defaulting to INFO")
             log_level = logging.INFO
 
-        enable_console_logging(log_level)
+        # Configure logging for all modules
+        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
         signal_service = os.environ.get("SIGNAL_SERVICE")
         phone_number = os.environ.get("PHONE_NUMBER")
@@ -49,12 +51,12 @@ def main() -> None:
         bot.register(ReplyCommand())
 
         # enable a chat command only for groups
-        bot.register(AttachmentCommand(), contacts=False, groups=True)
+        bot.register(AttachmentCommand())
 
         # enable a chat command for one specific group with the name "My Group"
 
         # chat command is enabled for all groups and one specific contact
-        bot.register(TriggeredCommand(), contacts=["+490123456789"], groups=True)
+        bot.register(TriggeredCommand())
 
         bot.register(RegexTriggeredCommand())
 
@@ -62,9 +64,12 @@ def main() -> None:
         bot.register(DeleteCommand())
         bot.register(ReceiveDeleteCommand())
         bot.register(StylesCommand())
-        bot.register(SearchWebCommand(), contacts=True, groups=True)
-        bot.register(ConvertCommand(), contacts=True, groups=True)
-        bot.register(HelloCommand(), contacts=True, groups=True)
+        bot.register(SearchWebCommand())
+        bot.register(ConvertCommand())
+        bot.register(HelloCommand())
+        bot.register(HelpCommand())
+
+
         bot.start()
 
     except Exception as e:

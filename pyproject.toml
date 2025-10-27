@@ -28,7 +28,7 @@ dependencies = [
     "tzlocal",
     "websockets",
     "yarl",
-    "markitdown"
+    "markitdown[all]"
 ]
 
 [build-system]
