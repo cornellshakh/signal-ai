@@ -19,5 +19,8 @@ poetry.lock
 # Environment file
 .env
 
+# Local data and attachments
+signal-cli-config/
+
 # Documentation
 docs/

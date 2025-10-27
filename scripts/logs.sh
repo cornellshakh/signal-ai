@@ -1,22 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# Script to view the logs of the signal-cli-rest-api container.
+# Script to view the logs of a service. Defaults to the 'bot' service.
+# Usage: ./scripts/logs.sh [service_name]
+# Example: ./scripts/logs.sh signal-cli-rest-api
 
 # --- Configuration ---
-CONTAINER_NAME="signal-cli-rest-api"
+SERVICE_NAME=${1:-bot}
 
 # --- Main ---
-echo "Showing logs for ${CONTAINER_NAME}..."
-echo "Press Ctrl+C to exit."
+echo "Message: Showing logs for '${SERVICE_NAME}' service..."
+echo "Message: Press Ctrl+C to exit."
 
-if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
-    docker logs -f "${CONTAINER_NAME}"
-else
-    echo "Container is not running."
-    # Check if there are logs from a stopped container
-    if [ "$(docker ps -aq -f status=exited -f name=${CONTAINER_NAME})" ]; then
-        echo "Showing logs from the last run:"
-        docker logs "${CONTAINER_NAME}"
-    fi
-fi
+docker compose logs -f "${SERVICE_NAME}"

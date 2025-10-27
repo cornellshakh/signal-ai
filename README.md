@@ -11,7 +11,7 @@ A bot that uses the `signal-cli-rest-api` container to interact with the Signal 
     cd <repository_directory>
     ```
 
-2.  Run the setup script:
+2.  Run the setup script using uv to create the virtual environment and sync dependencies:
 
     ```bash
     ./scripts/setup.sh

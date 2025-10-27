@@ -8,14 +8,28 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiohttp",
+    "aiosignal",
+    "annotated-types",
+    "apscheduler",
+    "attrs",
+    "frozenlist",
+    "idna",
+    "multidict",
+    "packaging",
+    "phonenumbers",
+    "propcache",
+    "pydantic",
+    "pydantic-core",
     "python-dotenv",
     "signalbot",
+    "typing-extensions",
+    "typing-inspection",
+    "tzlocal",
+    "websockets",
+    "yarl",
+    "markitdown"
 ]
-aiohttp = "^3.13.1"
-apscheduler = "^3.11.0"
-pydantic = "^2.12.3"
-websockets = "^15.0.1"
-phonenumbers = "^9.0.17"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

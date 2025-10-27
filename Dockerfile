@@ -1,16 +1,18 @@
-FROM python:3.13-slim-buster
-
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-USER appuser
+FROM python:3.13-slim-bookworm
 
 WORKDIR /app
 
+# Install Poetry
+RUN pip install poetry
+
+# Copy pyproject.toml and poetry.lock
 COPY pyproject.toml poetry.lock ./
 
-RUN pip install poetry && poetry install --no-dev --user
+# Install dependencies
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi --no-root
 
+# Copy the rest of the application code
 COPY . .
 
-USER appuser
-
-CMD ["poetry", "run", "python", "src/bot.py"]
+CMD ["python", "src/bot.py"]

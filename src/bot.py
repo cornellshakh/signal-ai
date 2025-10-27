@@ -2,9 +2,7 @@ import logging  # noqa: INP001
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from dotenv import load_dotenv
-
-load_dotenv()
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from example.attachments import AttachmentCommand
 from example.delete import DeleteCommand
@@ -16,7 +14,9 @@ from example.reply import ReplyCommand
 from example.styles import StylesCommand
 from example.multiple_triggered import TriggeredCommand as TriggeredCommand
 from example.typing import TypingCommand
-
+from example.convert import ConvertCommand
+from src.commands.search_web import SearchWebCommand
+from src.commands.hello import HelloCommand
 from signalbot import SignalBot, enable_console_logging
 
 
@@ -34,9 +34,13 @@ def main() -> None:
         signal_service = os.environ.get("SIGNAL_SERVICE")
         phone_number = os.environ.get("PHONE_NUMBER")
 
+        logging.info(f"Signal service: {signal_service}")
+        logging.info(f"Phone number: {phone_number}")
+
         config = {
             "signal_service": signal_service,
             "phone_number": phone_number,
+            "download_attachments": True
         }
         bot = SignalBot(config)
 
@@ -48,7 +52,6 @@ def main() -> None:
         bot.register(AttachmentCommand(), contacts=False, groups=True)
 
         # enable a chat command for one specific group with the name "My Group"
-        bot.register(TypingCommand(), groups=["My Group"])
 
         # chat command is enabled for all groups and one specific contact
         bot.register(TriggeredCommand(), contacts=["+490123456789"], groups=True)
@@ -59,6 +62,9 @@ def main() -> None:
         bot.register(DeleteCommand())
         bot.register(ReceiveDeleteCommand())
         bot.register(StylesCommand())
+        bot.register(SearchWebCommand(), contacts=True, groups=True)
+        bot.register(ConvertCommand(), contacts=True, groups=True)
+        bot.register(HelloCommand(), contacts=True, groups=True)
         bot.start()
 
     except Exception as e:
