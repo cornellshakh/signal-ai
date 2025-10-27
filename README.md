@@ -79,6 +79,32 @@ The bot responds to the following commands:
 - `./scripts/logs.sh`: View logs from all services.
 - `./scripts/status.sh`: Check the status of Docker containers.
 - `./scripts/link.sh`: Link your bot to a Signal account.
+- `./scripts/setup.sh`: Set up a local Python development environment (without Docker).
+
+## Local Development (Without Docker)
+
+For developers who prefer to work without Docker, a local setup script is provided.
+
+1.  **Set up the Environment**:
+
+    Run the setup script to create a Python virtual environment and install the required dependencies.
+
+    ```bash
+    ./scripts/setup.sh
+    ```
+
+2.  **Configure**:
+
+    Follow the same configuration steps as the Docker setup by creating and editing your `.env` file.
+
+3.  **Run the Bot**:
+
+    Activate the virtual environment and run the bot directly:
+
+    ```bash
+    source .venv/bin/activate
+    python -m src.signal_ai.bot
+    ```
 
 ## Contributing
 
