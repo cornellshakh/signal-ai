@@ -2,7 +2,6 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from tinydb import Query, TinyDB
 from tinydb.middlewares import CachingMiddleware
@@ -63,7 +62,10 @@ class PersistenceManager:
         """
         Creates a timestamped backup of the database file.
         """
-        backup_path = self._db_path.parent / f"{self._db_path.stem}_{datetime.now().strftime('%Y%m%d%H%M%S')}.json"
+        backup_path = (
+            self._db_path.parent
+            / f"{self._db_path.stem}_{datetime.now().strftime('%Y%m%d%H%M%S')}.json"
+        )
         try:
             shutil.copy(self._db_path, backup_path)
             logging.info(f"Database backed up to {backup_path}")

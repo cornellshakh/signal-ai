@@ -1,12 +1,22 @@
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from signalbot import SignalBot
 
 from .core.persistence import PersistenceManager
 from .commands.dispatcher import CommandDispatcher
+
+
+class SignalAIBot(SignalBot):
+    """Custom bot class to hold the persistence manager and scheduler."""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.persistence_manager: Optional[PersistenceManager] = None
+        self.scheduler: Optional[BackgroundScheduler] = None
 
 
 def main() -> None:
@@ -36,19 +46,19 @@ def main() -> None:
             "phone_number": phone_number,
             "download_attachments": True,
         }
-        bot = SignalBot(config)
+        bot = SignalAIBot(config)
 
-        # Register the unified command handler
+        # Initialize and attach PersistenceManager
+        db_path = Path.home() / ".signal-ai" / "db.json"
+        bot.persistence_manager = PersistenceManager(db_path)
+
+        # Register command handlers
         bot.register(CommandDispatcher())
 
-        # Initialize PersistenceManager
-        db_path = Path.home() / ".signal-ai" / "db.json"
-        persistence_manager = PersistenceManager(db_path)
-
-        # Schedule hourly backups
+        # Initialize and attach scheduler
         scheduler = BackgroundScheduler()
-        scheduler.add_job(persistence_manager.backup_database, "interval", hours=1)
-        scheduler.start()
+        scheduler.add_job(bot.persistence_manager.backup_database, "interval", hours=1)
+        bot.scheduler = scheduler
 
         bot.start()
 

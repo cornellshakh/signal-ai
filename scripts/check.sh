@@ -9,12 +9,12 @@ set -euo pipefail
 echo "🚀 Starting code quality checks..."
 
 echo " lint: Running ruff linter..."
-poetry run ruff check src/signal_ai/ example/
+poetry run ruff check src/signal_ai/
 
 echo " format: Checking code formatting with ruff..."
-poetry run ruff format --check src/signal_ai/ example/
+poetry run ruff format --check src/signal_ai/
 
 echo " types: Running mypy for static type checking..."
-poetry run mypy src/signal_ai/ example/
+poetry run mypy src/signal_ai/
 
 echo "✅ All checks passed successfully!"

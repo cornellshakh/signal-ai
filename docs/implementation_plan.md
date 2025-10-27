@@ -45,12 +45,12 @@ _Goal: Adapt the existing command system to support the unified `@BotName` inter
 
 _Goal: Build out the logic for each of the user-facing commands, following the design in `docs/bot_interaction_flow.md`._
 
-- [ ] **`help` command:** Refactor `src/signal_ai/commands/help.py` to implement the full, aesthetically pleasing help message as defined in the interaction flow.
-- [ ] **`config` command:** Create `src/signal_ai/commands/config.py` and implement the `view` and `set` sub-commands, following the interaction flow.
-- [ ] **`todo` command:** Create `src/signal_ai/commands/todo.py` and implement the `add`, `list`, and `done` sub-commands, following the interaction flow.
-- [ ] **`remind` command:** Create `src/signal_ai/commands/remind.py` and implement the scheduling logic, following the interaction flow.
-- [ ] **User Feedback System:** Implement the three-stage feedback system (typing indicator, `⏳`, `✅`/`❌` reactions) as described in the interaction flow.
-- [ ] **Onboarding Flow:** Implement the welcome message for when the bot is first added to a group.
+- [x] **`help` command:** Refactor `src/signal_ai/commands/help.py` to implement the full, aesthetically pleasing help message as defined in the interaction flow.
+- [x] **`config` command:** Create `src/signal_ai/commands/config.py` and implement the `view` and `set` sub-commands, following the interaction flow.
+- [x] **`todo` command:** Create `src/signal_ai/commands/todo.py` and implement the `add`, `list`, and `done` sub-commands, following the interaction flow.
+- [x] **`remind` command:** Create `src/signal_ai/commands/remind.py` and implement the scheduling logic, following the interaction flow.
+- [x] **User Feedback System:** Implement the three-stage feedback system (typing indicator, `⏳`, `✅`/`❌` reactions) as described in the interaction flow.
+- [x] **Onboarding Flow:** Implement the welcome message for when the bot is first added to a group.
 
 ## Phase 5: AI Integration
 

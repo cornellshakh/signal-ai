@@ -1,23 +1,29 @@
-from signalbot import Command, Context
+import os
+from signalbot import Context
 
 
-class HelpCommand(Command):
-    def describe(self) -> str:
-        return "!help - Show this help message"
+async def help_command_handler(context: Context, args: list[str]):
+    """
+    Handles the 'help' command.
+    """
+    bot_name = os.environ.get("BOT_NAME", "BotName")
 
-    async def handle(self, c: Context):
-        help_text = """
-Available commands:
-- !ping: Check if the bot is alive.
-- !reply: Reply to the message.
-- !attachment: Send an attachment.
-- !trigger: A triggered command.
-- !edit: Edit a message.
-- !delete: Delete a message.
-- !styles: Show different text styles.
-- !search: Search the web.
-- !convert: Convert units.
-- !hello: Say hello.
-- !help: Show this help message.
+    help_text = f"""
+🤖 **Signal AI Assistant**
+
+> I'm a bot designed to assist you. Interact with me by mentioning my name (`@{bot_name}`) followed by a command or a question.
+
+**Available Commands:**
+
+```
+┌
+├─ 📋 todo      - Manage a shared to-do list.
+├─ ⏰ remind    - Set a reminder.
+├─ ⚙️ config    - Configure my settings for this chat.
+├─ 🔎 search    - Search the web or summarize a URL.
+└─ 🖼️ image     - Generate an image from a prompt.
+```
+
+_For more details, type `@{bot_name} help <command>`._
 """
-        await c.send(help_text)
+    await context.send(help_text, text_mode="styled")
