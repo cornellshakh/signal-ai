@@ -5,7 +5,7 @@ from signalbot import Command, Context, triggered
 
 class TypingCommand(Command):
     def describe(self) -> str:
-        return None
+        return "A command to demonstrate the typing indicator."
 
     @triggered("typing")
     async def handle(self, c: Context) -> None:

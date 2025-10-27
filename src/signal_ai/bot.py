@@ -1,21 +1,20 @@
 import logging
 import os
 
-from example.attachments import AttachmentCommand
-from example.delete import DeleteCommand
-from example.delete import DeleteCommand as ReceiveDeleteCommand
-from example.edit import EditCommand
-from example.multiple_triggered import TriggeredCommand
-from example.ping import PingCommand
-from example.regex_triggered import RegexTriggeredCommand
-from example.reply import ReplyCommand
-from example.styles import StylesCommand
 from signalbot import SignalBot
 
 from .commands.convert import ConvertCommand
 from .commands.hello import HelloCommand
 from .commands.help import HelpCommand
 from .commands.search_web import SearchWebCommand
+from example.attachments import AttachmentCommand
+from example.delete import DeleteCommand, DeleteCommand as ReceiveDeleteCommand
+from example.edit import EditCommand
+from example.multiple_triggered import TriggeredCommand
+from example.ping import PingCommand
+from example.regex_triggered import RegexTriggeredCommand
+from example.reply import ReplyCommand
+from example.styles import StylesCommand
 
 
 def main() -> None:
@@ -30,7 +29,8 @@ def main() -> None:
 
         # Configure logging for all modules
         logging.basicConfig(
-            level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            level=log_level,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
 
         signal_service = os.environ.get("SIGNAL_SERVICE")

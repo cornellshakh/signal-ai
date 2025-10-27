@@ -1,22 +1,20 @@
 #!/bin/bash
+#
+# This script runs a series of checks to ensure code quality before committing.
+# It includes linting, formatting checks, and static type analysis.
+# It is designed to be run from the root of the repository.
+
 set -euo pipefail
 
-# Script to run linting, formatting checks, and static analysis.
-# It uses 'ruff' for high-speed linting/formatting and 'mypy' for static type checking.
+echo "🚀 Starting code quality checks..."
 
-# --- Main ---
-echo "Running comprehensive Python code checks..."
+echo " lint: Running ruff linter..."
+poetry run ruff check src/signal_ai/ example/
 
-echo -e "\n--- Running ruff (linter and import sorter) ---"
-# Check for any linting or import sorting issues.
-uv run ruff check .
+echo " format: Checking code formatting with ruff..."
+poetry run ruff format --check src/signal_ai/ example/
 
-echo -e "\n--- Running ruff (formatter check) ---"
-# Check if any files need reformatting.
-uv run ruff format --check .
+echo " types: Running mypy for static type checking..."
+poetry run mypy src/signal_ai/ example/
 
-echo -e "\n--- Running mypy (static type checker) ---"
-# Perform strict static type analysis.
-uv run mypy signalbot/ tests/ example/
-
-echo -e "\n✅ All checks passed!"
+echo "✅ All checks passed successfully!"

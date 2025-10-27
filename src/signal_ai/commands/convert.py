@@ -8,7 +8,8 @@ log = logging.getLogger(__name__)
 
 
 class ConvertCommand(Command):
-    """A command to convert an attached file or message text to Markdown using MarkItDown.
+    """
+    A command to convert an attached file or message text to Markdown using MarkItDown.
     To use this command, send the bot a message with a file attached or text to convert.
     """
 
@@ -23,9 +24,7 @@ class ConvertCommand(Command):
 
         # Prioritize text/URL argument after the command
         message_text = (
-            c.message.text.split(" ", 1)[1]
-            if len(c.message.text.split()) > 1
-            else None
+            c.message.text.split(" ", 1)[1] if len(c.message.text.split()) > 1 else None
         )
         if message_text:
             source_to_convert = message_text

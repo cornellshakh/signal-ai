@@ -74,6 +74,13 @@ A collection of scripts are available in the `scripts/` directory to manage the 
 - `./scripts/status.sh`: Checks the current status of the Docker containers.
 - `./scripts/link.sh`: The one-time setup script to link your bot to a Signal account.
 
+## Development and Code Quality
+
+This project uses `ruff` for linting and formatting, and `mypy` for static type checking to ensure code quality.
+
+- `./scripts/check.sh`: Runs all checks (linting, formatting, and type checking) to verify the code. This is the same script that runs in the CI pipeline, so it's a good idea to run it before pushing your changes.
+- `./scripts/format.sh`: Automatically formats the code and fixes any auto-fixable linting issues. Run this script to easily clean up your code before committing.
+
 <details>
 <summary><h3>Advanced: Running with a Local Python Environment</h3></summary>
 
