@@ -1,73 +1,45 @@
-from typing import TYPE_CHECKING
 from signalbot import Context
-
-if TYPE_CHECKING:
-    from ..bot import SignalAIBot
+from ..core.persistence import PersistenceManager
 
 
-async def config_command_handler(context: Context, args: list[str]):
+async def handle_config(
+    c: Context, args: list[str], persistence_manager: PersistenceManager
+):
     """
-    Handles the 'config' command and its sub-commands.
+    Handles the !config command.
     """
-    if not args or args[0] not in ["view", "set"]:
-        await context.send(
-            "Usage: `@BotName config <view|set> [key] [value]`", text_mode="styled"
-        )
+    if not args:
+        await c.reply("Usage: `!config [view|set] [args...]`")
         return
 
-    sub_command = args[0]
-
-    if TYPE_CHECKING:
-        assert isinstance(context.bot, SignalAIBot)
-
-    if context.bot.persistence_manager is None:
-        # This should not happen if the bot is initialized correctly.
-        await context.send("⚠️ Error: Persistence manager not initialized.")
-        return
-
-    persistence_manager = context.bot.persistence_manager
-    chat_context = persistence_manager.load_context(context.message.source)
+    sub_command = args[0].lower()
+    chat_context = persistence_manager.load_context(c.message.source)
 
     if sub_command == "view":
-        config_text = "⚙️ **Chat Configuration**\n\n```\n"
-        config_text += f"mode: {chat_context.mode}\n"
-        config_text += (
-            "```\n\n_Use `@BotName config set <key> <value>` to make changes._"
-        )
-        await context.send(config_text, text_mode="styled")
+        mode = chat_context.config.mode
+        await c.reply(f"Current mode: `{mode}`")
 
     elif sub_command == "set":
-        if len(args) < 3:
-            await context.send(
-                "Usage: `@BotName config set <key> <value>`", text_mode="styled"
-            )
+        if len(args) < 2:
+            await c.reply("Usage: `!config set mode [ai|quiet|parrot]`")
             return
 
-        key, value_str = args[1], " ".join(args[2:])
+        key = args[1].lower()
+        if key == "mode":
+            if len(args) < 3:
+                await c.reply("Usage: `!config set mode [ai|quiet|parrot]`")
+                return
 
-        if not hasattr(chat_context, key):
-            await context.send(
-                f"⚠️ Error: Unknown configuration key '{key}'", text_mode="styled"
-            )
-            return
-
-        # Get the original type of the attribute to cast the new value
-        original_type = type(getattr(chat_context, key))
-        try:
-            if original_type is bool:
-                new_value = value_str.lower() == "true"
+            new_mode = args[2].lower()
+            if new_mode in ["ai", "quiet", "parrot"]:
+                chat_context.config.mode = new_mode
+                persistence_manager.save_context(c.message.source)
+                await c.reply(f"Mode set to `{new_mode}`.")
             else:
-                new_value = original_type(value_str)
-        except (ValueError, TypeError):
-            await context.send(
-                f"⚠️ Error: Invalid value type for '{key}'. Expected {original_type.__name__}.",
-                text_mode="styled",
-            )
-            return
-
-        setattr(chat_context, key, new_value)
-        persistence_manager.save_context(chat_context)
-        await context.send(
-            f"✅ **Configuration updated:** `{key}` set to `{new_value}`",
-            text_mode="styled",
-        )
+                await c.reply(
+                    f"Invalid mode: `{new_mode}`. Must be one of `ai`, `quiet`, or `parrot`."
+                )
+        else:
+            await c.reply(f"Unknown config key: `{key}`.")
+    else:
+        await c.reply(f"Unknown sub-command: `{sub_command}`. Use `view` or `set`.")

@@ -16,4 +16,7 @@ RUN poetry config virtualenvs.create false \
 # Copy the rest of the application code
 COPY ./src /app/src
 
+# Create the data directory and the database file
+RUN mkdir -p /app/data && touch /app/data/signal_ai.db
+
 CMD ["python", "-m", "src.signal_ai.bot"]

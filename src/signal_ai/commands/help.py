@@ -1,29 +1,25 @@
-import os
 from signalbot import Context
 
 
-async def help_command_handler(context: Context, args: list[str]):
+async def handle_help(c: Context, args: list[str]):
     """
-    Handles the 'help' command.
+    Displays the help message.
     """
-    bot_name = os.environ.get("BOT_NAME", "BotName")
+    # The bot_name is needed for the help message.
+    # It's not available here directly, so we'll pass it in from the MessageHandler.
+    # This is a temporary solution until a better command dispatcher is in place.
+    bot_name = args[0]
 
     help_text = f"""
-🤖 **Signal AI Assistant**
-
-> I'm a bot designed to assist you. Interact with me by mentioning my name (`@{bot_name}`) followed by a command or a question.
-
-**Available Commands:**
-
-```
-┌
-├─ 📋 todo      - Manage a shared to-do list.
-├─ ⏰ remind    - Set a reminder.
-├─ ⚙️ config    - Configure my settings for this chat.
-├─ 🔎 search    - Search the web or summarize a URL.
-└─ 🖼️ image     - Generate an image from a prompt.
-```
-
-_For more details, type `@{bot_name} help <command>`._
+*Commands*
+- `@{bot_name} !help`: Shows this help message.
+- `@{bot_name} !config view`: Views the current chat configuration.
+- `@{bot_name} !config set mode [ai|quiet|parrot]`: Sets the bot's interaction mode.
+- `@{bot_name} !todo add [item]`: Adds an item to the to-do list.
+- `@{bot_name} !todo list`: Lists all items in the to-do list.
+- `@{bot_name} !todo done [index]`: Marks a to-do item as done.
+- `@{bot_name} !remind [in|at] [time] [message]`: Sets a reminder.
+- `@{bot_name} !search [query]`: Searches the web.
+- `@{bot_name} !image [prompt]`: Generates an image.
 """
-    await context.send(help_text, text_mode="styled")
+    await c.reply(help_text)

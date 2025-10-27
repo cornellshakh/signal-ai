@@ -1,72 +1,69 @@
-import logging
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
 from signalbot import Context
-
-if TYPE_CHECKING:
-    from ..bot import SignalAIBot
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
-async def remind_command_handler(context: Context, args: list[str]):
+async def handle_remind(c: Context, args: list[str], scheduler: BackgroundScheduler):
     """
-    Handles the 'remind' command.
+    Handles the !remind command.
     """
-    if len(args) < 4 or args[0] != "me" or args[1] != "in":
-        await context.send(
-            "Usage: `@BotName remind me in <number> <minutes|hours> to <message>`",
-            text_mode="styled",
-        )
+    if len(args) < 3:
+        await c.reply("Usage: `!remind [in|at] [time] [message]`")
         return
 
-    try:
-        number = int(args[2])
-        unit = args[3]
-        if "to" not in args:
-            raise ValueError("Missing 'to' in reminder message")
+    when_type = args[0].lower()
+    time_str = args[1]
+    message = " ".join(args[2:])
 
-        message_index = args.index("to") + 1
-        message = " ".join(args[message_index:])
+    if when_type == "in":
+        try:
+            # Simple parsing for "in" reminders, e.g., "10s", "5m", "1h"
+            value = int(time_str[:-1])
+            unit = time_str[-1]
+            if unit == "s":
+                delta = timedelta(seconds=value)
+            elif unit == "m":
+                delta = timedelta(minutes=value)
+            elif unit == "h":
+                delta = timedelta(hours=value)
+            else:
+                raise ValueError("Invalid time unit")
 
-        if unit.startswith("minute"):
-            delta = timedelta(minutes=number)
-        elif unit.startswith("hour"):
-            delta = timedelta(hours=number)
-        else:
-            raise ValueError(f"Unknown time unit: {unit}")
+            run_date = datetime.now() + delta
+            scheduler.add_job(
+                c.reply, "date", run_date=run_date, args=[f"Reminder: {message}"]
+            )
+            await c.reply(
+                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
+            )
 
-        remind_time = datetime.now() + delta
-
-        if TYPE_CHECKING:
-            assert isinstance(context.bot, SignalAIBot)
-
-        if context.bot.scheduler is None:
-            await context.send(
-                "⚠️ Error: Scheduler not initialized.", text_mode="styled"
+        except (ValueError, IndexError):
+            await c.reply(
+                "Invalid time format for 'in'. Use something like `10s`, `5m`, or `1h`."
             )
             return
 
-        context.bot.scheduler.add_job(
-            send_reminder,
-            "date",
-            run_date=remind_time,
-            args=[context.bot, context.message.source, message],
-        )
+    elif when_type == "at":
+        try:
+            run_date = datetime.strptime(time_str, "%H:%M")
+            run_date = datetime.now().replace(
+                hour=run_date.hour, minute=run_date.minute, second=0, microsecond=0
+            )
+            if run_date < datetime.now():
+                run_date += timedelta(
+                    days=1
+                )  # if time is in the past, schedule for tomorrow
 
-        await context.send(
-            f"✅ **Got it.** I will remind you at `{remind_time.strftime('%I:%M %p')}` to \"{message}\".",
-            text_mode="styled",
-        )
+            scheduler.add_job(
+                c.reply, "date", run_date=run_date, args=[f"Reminder: {message}"]
+            )
+            await c.reply(
+                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
+            )
 
-    except (ValueError, IndexError) as e:
-        logging.error(f"Error parsing reminder: {e}")
-        await context.send(
-            "Usage: `@BotName remind me in <number> <minutes|hours> to <message>`",
-            text_mode="styled",
-        )
+        except ValueError:
+            await c.reply("Invalid time format for 'at'. Use HH:MM.")
+            return
 
-
-async def send_reminder(bot: "SignalAIBot", chat_id: str, message: str):
-    """
-    Sends the reminder message.
-    """
-    await bot.send(chat_id, f"⏰ **Reminder:** {message}", text_mode="styled")
+    else:
+        await c.reply("Usage: `!remind [in|at] [time] [message]`")

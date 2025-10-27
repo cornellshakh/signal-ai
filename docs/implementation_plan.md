@@ -1,68 +1,63 @@
 # Bot Implementation Plan
 
-This document outlines the step-by-step process for implementing the Signal AI bot as defined in `docs/bot_interaction_flow.md`. It has been updated to reflect the existing codebase.
+This document outlines the technical implementation plan for the Signal AI bot. It is structured to directly correspond with the features and flows defined in `docs/bot_interaction_flow.md`.
 
-## Phase 1: The Core Foundation (Completed)
+## Development Approach
 
-_Goal: Set up the basic project structure and a minimal, running bot that can receive and log messages._
+**It is critical that this plan is executed in a step-by-step, iterative manner.** Each task or feature should be implemented and thoroughly tested to ensure it is working correctly before moving on to the next. This approach minimizes complexity, makes debugging easier, and ensures a stable foundation for subsequent features. Do not proceed to a new task until the previous one is complete and verified.
 
-- [x] **Project Scaffolding:**
-  - [x] The `src/signal_ai/` directory structure is in place.
-  - [x] The main `src/signal_ai/bot.py` file exists and is functional.
-- [x] **Basic Bot:**
-  - [x] `bot.py` successfully initializes `signalbot` and connects to the Signal service.
-- [x] **Docker Integration:**
-  - [x] The `Dockerfile` is set up to build and run the bot.
-  - [x] The bot can be started with `./scripts/start.sh`.
+## Completed Foundational Work
 
-## Phase 2: The Persistence Layer (Completed)
+The following core components are already in place and considered complete:
 
-_Goal: Implement the TinyDB-based persistence manager to give the bot a memory._
+- **Project Scaffolding:** The `src/signal_ai/` directory structure, `pyproject.toml` dependencies, and main `bot.py` entry point are functional.
+- **Basic Bot:** The bot successfully initializes `signalbot`, connects to the Signal service, and can receive messages.
+- **Docker Integration:** The `Dockerfile` and `docker-compose.yml` are configured, and the bot can be managed via the `./scripts/` shell scripts.
 
-- [x] **Dependencies:**
-  - [x] Add `tinydb` and `pydantic` to the project's dependencies in `pyproject.toml`.
-- [x] **Data Model:**
-  - [x] Create `src/signal_ai/core/context.py` and define the `Context` data class using Pydantic.
-- [x] **Persistence Manager:**
-  - [x] Create `src/signal_ai/core/persistence.py`.
-  - [x] Implement the `PersistenceManager` class using TinyDB with `CachingMiddleware`.
-  - [x] Implement `load_context(chat_id)` and `save_context(chat_id, context)` methods.
-  - [x] Add the hourly backup logic.
+## 1. Rebuild Core Infrastructure (From Scratch)
 
-## Phase 3: Command Framework Refinement (Completed)
+_Goal: Implement the core components based on the new specification, removing the outdated legacy code._
 
-_Goal: Adapt the existing command system to support the unified `@BotName` interaction model and our new features._
+- [x] **Implement New Persistence Layer:**
+  - Create `src/signal_ai/core/persistence.py`.
+  - Implement the `PersistenceManager` class using TinyDB with `CachingMiddleware`.
+  - Implement `load_context` and `save_context` methods.
+  - Add the hourly backup logic.
+- [x] **Implement New Context Model:**
+  - Create `src/signal_ai/core/context.py`.
+  - Define the `Context` data class using Pydantic, ensuring it includes fields for `config`, `history`, `todos`, etc., as required by the specification.
+- [x] **Implement New Message Handler:**
+  - Create `src/signal_ai/core/message_handler.py`.
+  - Implement the **Interaction Logic Gate** as the first step in the handler, checking for chat type and `mode` before any other processing.
+  - Implement the **Message Parsing and Routing** logic to direct `!` commands and conversational messages appropriately.
 
-- [x] **Unified Interaction Model:**
-  - [x] Modify the core bot logic to handle all commands and conversations through a single entry point when the bot is mentioned. The existing `signalbot` registration might need a custom wrapper or a new base command class to achieve this.
-- [x] **Argument Parsing:**
-  - [x] Implement a robust parser that can handle sub-commands (e.g., `config set mode all`) and arguments.
-- [x] **Cleanup Existing Commands:**
-  - [x] Review the commands currently registered from the `example/` directory in `bot.py`.
-  - [x] Remove the ones that are not part of our final design (e.g., `PingCommand`, `ReplyCommand`, etc.).
+## 2. Implement Core Features
 
-## Phase 4: Feature Implementation
+_Goal: Build out the essential, non-AI user-facing features._
 
-_Goal: Build out the logic for each of the user-facing commands, following the design in `docs/bot_interaction_flow.md`._
+- [x] **Reply Strategy:**
+  - Implement the logic for mention-replies in group chats vs. standard replies in direct chats.
+- [x] **`!help` command:**
+  - Create `src/signal_ai/commands/help.py` and implement the help message.
+- [x] **`!config` command:**
+  - Create `src/signal_ai/commands/config.py` and implement the `view` and `set mode` sub-commands.
+- [x] **`!todo` command:**
+  - Create `src/signal_ai/commands/todo.py` and implement `add`, `list`, and `done`.
+- [x] **`!remind` command:**
+  - Create `src/signal_ai/commands/remind.py` and implement scheduling logic.
+- [x] **Onboarding Flow:**
+  - Implement the welcome message for when the bot joins a group.
 
-- [x] **`help` command:** Refactor `src/signal_ai/commands/help.py` to implement the full, aesthetically pleasing help message as defined in the interaction flow.
-- [x] **`config` command:** Create `src/signal_ai/commands/config.py` and implement the `view` and `set` sub-commands, following the interaction flow.
-- [x] **`todo` command:** Create `src/signal_ai/commands/todo.py` and implement the `add`, `list`, and `done` sub-commands, following the interaction flow.
-- [x] **`remind` command:** Create `src/signal_ai/commands/remind.py` and implement the scheduling logic, following the interaction flow.
-- [x] **User Feedback System:** Implement the three-stage feedback system (typing indicator, `⏳`, `✅`/`❌` reactions) as described in the interaction flow.
-- [x] **Onboarding Flow:** Implement the welcome message for when the bot is first added to a group.
+## 3. AI Integration
 
-## Phase 5: AI Integration
+_Goal: Connect the bot to the AI backend and implement AI-powered features._
 
-_Goal: Connect the bot to the Gemini API and implement the AI-powered features as defined in `docs/bot_interaction_flow.md`._
-
-- [ ] **AI Client:**
-  - [ ] Create `src/signal_ai/core/ai_client.py` to handle all interactions with the Gemini API.
-- [ ] **Natural Conversation:**
-  - [ ] In the main message handler, if a message is not a recognized command, treat it as a conversational prompt.
-  - [ ] Implement the "Simple Log" model: send the conversation history to the `AIClient` and get a response.
-- [ ] **AI-Powered Commands:**
-  - [ ] Create `src/signal_ai/commands/search.py` for the web search/URL summary command.
-  - [ ] Create `src/signal_ai/commands/image.py` for the image generation command.
-- [ ] **Summarization Service:**
-  - [ ] Implement the "Intelligent Summarizer" background task that periodically summarizes the `conversation_log` for each chat to optimize token usage.
+- [x] **AI Client:**
+  - Create `src/signal_ai/core/ai_client.py` to handle all interactions with the Gemini API.
+- [x] **AI-Powered Commands:**
+  - Create `src/signal_ai/commands/search.py` for web search/URL summary.
+  - Create `src/signal_ai/commands/image.py` for image generation.
+- [x] **User Feedback System:**
+  - Implement the three-stage feedback system (typing, `⏳`, `✅`/`❌`).
+- [x] **Summarization Service:**
+  - Implement the "Intelligent Summarizer" background task.

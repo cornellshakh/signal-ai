@@ -2,8 +2,9 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, cast
 
-from tinydb import Query, TinyDB
+from tinydb import TinyDB, Query
 from tinydb.middlewares import CachingMiddleware
 from tinydb.storages import JSONStorage
 
@@ -11,65 +12,80 @@ from .context import Context
 
 
 class PersistenceManager:
-    """
-    Manages the persistence of chat contexts using TinyDB.
-    """
+    """Handles the loading, saving, and backup of chat contexts using TinyDB."""
 
     def __init__(self, db_path: Path):
         """
         Initializes the PersistenceManager.
+
         Args:
-            db_path: The path to the TinyDB database file.
+            db_path: The path to the TinyDB JSON file.
         """
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        storage = CachingMiddleware(JSONStorage)
-        self._db = TinyDB(self._db_path, storage=storage)
+        self._db = TinyDB(self._db_path, storage=CachingMiddleware(JSONStorage))
+        self._contexts: Dict[str, Context] = {}
+        logging.info(f"PersistenceManager initialized with database at {self._db_path}")
 
     def load_context(self, chat_id: str) -> Context:
         """
-        Loads the context for a given chat ID.
-        If no context exists, a new one is created.
+        Loads a chat context from the database or creates a new one.
+
         Args:
-            chat_id: The ID of the chat.
+            chat_id: The unique identifier for the chat.
+
         Returns:
-            The context for the chat.
+            The loaded or newly created Context object.
         """
-        ContextQuery = Query()
-        result = self._db.search(ContextQuery.chat_id == chat_id)
+        if chat_id in self._contexts:
+            return self._contexts[chat_id]
+
+        Chat = Query()
+        result = self._db.get(Chat.id == chat_id)
+
         if result:
             logging.info(f"Loaded context for chat_id: {chat_id}")
-            # result is a list, take the first element
-            return Context.model_validate(result[0])
+            context = Context.model_validate(cast(dict, result).get("data"))
         else:
-            logging.info(f"No context found for chat_id: {chat_id}, creating new one.")
-            return Context(chat_id=chat_id)
+            logging.info(
+                f"No existing context for chat_id: {chat_id}. Creating new one."
+            )
+            context = Context()
 
-    def save_context(self, context: Context) -> None:
+        self._contexts[chat_id] = context
+        return context
+
+    def save_context(self, chat_id: str):
         """
-        Saves the context for a given chat.
+        Saves a chat context to the database.
+
         Args:
-            context: The context to save.
+            chat_id: The unique identifier for the chat.
         """
-        ContextQuery = Query()
-        self._db.upsert(
-            context.model_dump(),
-            ContextQuery.chat_id == context.chat_id,
-        )
-        logging.info(f"Saved context for chat_id: {context.chat_id}")
+        if chat_id not in self._contexts:
+            logging.warning(
+                f"Attempted to save a non-existent context for chat_id: {chat_id}"
+            )
+            return
 
-    def backup_database(self) -> None:
+        context = self._contexts[chat_id]
+        Chat = Query()
+        self._db.upsert(
+            {"id": chat_id, "data": context.model_dump()}, Chat.id == chat_id
+        )
+        logging.info(f"Saved context for chat_id: {chat_id}")
+
+    def backup_database(self):
         """
         Creates a timestamped backup of the database file.
         """
-        backup_path = (
-            self._db_path.parent
-            / f"{self._db_path.stem}_{datetime.now().strftime('%Y%m%d%H%M%S')}.json"
-        )
+        backup_dir = self._db_path.parent / "backups"
+        backup_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = backup_dir / f"db_{timestamp}.json"
+
         try:
-            shutil.copy(self._db_path, backup_path)
-            logging.info(f"Database backed up to {backup_path}")
-        except FileNotFoundError:
-            logging.warning("Database file not found, skipping backup.")
+            shutil.copy2(self._db_path, backup_path)
+            logging.info(f"Database backup created at {backup_path}")
         except Exception as e:
-            logging.error(f"Error creating database backup: {e}")
+            logging.error(f"Failed to create database backup: {e}")
