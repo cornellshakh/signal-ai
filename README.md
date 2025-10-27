@@ -2,108 +2,53 @@
 
 A bot that uses the `signal-cli-rest-api` container to interact with the Signal service.
 
-## Setup
+## Quick Start (Recommended)
 
-This project can be run in two ways: using local Python with helper scripts, or fully containerized with Docker Compose.
-
-### Option 1: Local Setup (with Scripts)
-
-This method uses a local Python virtual environment for the bot and a Docker container for the Signal API.
-
-1.  **Clone the repository and configure your environment:**
-
-    ```bash
-    git clone <repository_url>
-    cd <repository_directory>
-    cp .env.example .env
-    # Edit .env with your phone number
-    ```
-
-2.  **Create Virtual Environment:**
-    Run the setup script to create a virtual environment and install the required dependencies:
-
-    ```bash
-    ./scripts/setup.sh
-    ```
-
-3.  **Link to Signal:**
-    Follow the instructions in the **"Linking to Signal"** section below. You will use the `./scripts/link.sh` command.
-
-4.  **Run the Bot:**
-    Once linked, start the Signal API service in the correct mode:
-    ```bash
-    ./scripts/start.sh
-    ```
-    Then, in a separate terminal, run the Python bot:
-    ```bash
-    poetry run python src/bot.py
-    ```
-
-### Option 2: Docker Compose Setup
-
-This method runs both the bot and the Signal API in Docker containers. It's the recommended method for simplicity and portability.
-
-1.  **Clone the repository and configure your environment:**
-
-    ```bash
-    git clone <repository_url>
-    cd <repository_directory>
-    cp .env.example .env
-    # Edit .env with your phone number
-    ```
-
-2.  **Build and Start Services:**
-
-    ```bash
-    docker-compose up --build
-    ```
-
-    This command will build and start both the `signal-cli-rest-api` and the `bot` services.
-
-3.  **Link to Signal:**
-    With the services running, follow the instructions in the **"Linking to Signal"** section below.
-
-## Linking to Signal
-
-To use the bot, you must first link it to a Signal account. This is a one-time process.
-
-### For Local Setup
-
-1.  Run the `link.sh` script. This will start the Signal API in `normal` mode.
-    ```bash
-    ./scripts/link.sh
-    ```
-2.  Open <http://127.0.0.1:8080/v1/qrcodelink?device_name=local> in your browser and scan the QR code with your Signal app.
-3.  Once linked, stop the script with `Ctrl+C`.
-
-### For Docker Compose Setup
-
-1.  In a separate terminal (while your `docker-compose up` command is **not** running), start the linking process:
-    ```bash
-    docker-compose run --rm --service-ports signal-cli-rest-api
-    ```
-    This command starts a temporary container in `normal` mode and exposes the necessary port.
-2.  Open <http://127.0.0.1:8080/v1/qrcodelink?device_name=local> in your browser and scan the QR code.
-3.  Once linked, stop the container with `Ctrl+C`. You can now start your services normally with `docker-compose up`.
-
-## Usage Instructions
+This project is designed to be run with Docker Compose, using simple helper scripts to manage the application.
 
 ### Prerequisites
 
-- A linked Signal device. See the [Setup](#setup) for details.
-- The `signal-cli-rest-api` container running in json-rpc mode.
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-### Running the bot
+### Step 1: Clone and Configure
 
-1.  Start the `signal-cli-rest-api` container:
+First, clone the repository and set up your environment configuration.
 
-    ```bash
-    ./scripts/start.sh
-    ```
+```bash
+git clone https://github.com/cornellshakh/signal-ai.git
+cd signal-ai
+cp .env.example .env
+```
 
-2.  Send commands to the bot via Signal.
+Next, you **must** edit the `.env` file and add the phone number of the Signal account you will be using for the bot.
 
-### Available Commands
+```plaintext
+# .env
+PHONE_NUMBER=+1234567890
+```
+
+### Step 2: Link to Signal
+
+You only need to do this once. This script will start the Signal service, allow you to scan a QR code to link your device, and then shut down.
+
+```bash
+./scripts/link.sh
+```
+
+This will prompt you to open a URL in your browser (e.g., `http://127.0.0.1:8080/v1/qrcodelink...`). Scan the QR code with the Signal app on your phone. Once it's linked, you can stop the script by pressing `Ctrl+C` in the terminal.
+
+### Step 3: Run the Bot
+
+Now you can build and start the bot and the Signal API service.
+
+```bash
+./scripts/start.sh
+```
+
+This command will start all services in the background. You can now send commands to your bot's phone number via Signal.
+
+## Available Commands
 
 The bot supports the following commands:
 
@@ -118,24 +63,51 @@ The bot supports the following commands:
 - `receive_delete`: Receives a delete message.
 - `styles`: Demonstrates text styles.
 
-## Configuration
+## Managing the Bot
 
-The bot can be configured using environment variables. See `.env` file.
+A collection of scripts are available in the `scripts/` directory to manage the application lifecycle.
 
-## Scripts
+- `./scripts/start.sh`: Builds and starts the bot and all related services.
+- `./scripts/stop.sh`: Stops all running services.
+- `./scripts/restart.sh`: A convenient way to stop and then immediately start the services again.
+- `./scripts/logs.sh`: Tails the logs from all running services. Use `Ctrl+C` to exit.
+- `./scripts/status.sh`: Checks the current status of the Docker containers.
+- `./scripts/link.sh`: The one-time setup script to link your bot to a Signal account.
 
-The `scripts/` directory contains the following scripts:
+<details>
+<summary><h3>Advanced: Running with a Local Python Environment</h3></summary>
 
-- `check.sh`: Checks the status of the bot.
-- `link.sh`: Links the bot to a Signal account.
-- `logs.sh`: Shows the logs of the bot.
-- `setup.sh`: Sets up the bot, creating a virtual environment and installing dependencies.
-- `start.sh`: Starts the bot.
-- `status.sh`: Shows the status of the bot.
-- `stop.sh`: Stops the bot.
+While Docker is the recommended method, you can also run the bot in a local Python virtual environment. This is useful for development or if you cannot use Docker for the bot itself.
 
-## Troubleshooting Tips
+**Note:** This method still requires Docker to run the `signal-cli-rest-api` service.
 
-- Check the bot's logs for errors.
-- Verify that the `signal-cli-rest-api` container is running correctly.
-- Ensure that the environment variables are configured correctly.
+1.  **Setup Virtual Environment:**
+    Run the setup script to create a virtual environment and install dependencies.
+
+    ```bash
+    ./scripts/setup.sh
+    ```
+
+2.  **Link to Signal:**
+    The linking process is the same. Use the script, which will handle the Docker container for you.
+
+    ```bash
+    ./scripts/link.sh
+    ```
+
+3.  **Run the Services:**
+First, start the Signal API service using the script:
+`bash
+    ./scripts/start.sh
+    `
+Then, in a separate terminal, activate the virtual environment and run the Python bot:
+`bash
+    poetry run python src/bot.py
+    `
+</details>
+
+## Troubleshooting
+
+- **Check the logs:** The first step is always to check the logs using `./scripts/logs.sh`.
+- **Verify `.env`:** Ensure the `PHONE_NUMBER` is set correctly in your `.env` file.
+- **Re-link:** If you have issues with your connection to Signal, you can try running `./scripts/link.sh` again.

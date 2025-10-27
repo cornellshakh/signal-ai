@@ -8,28 +8,32 @@ then
     exit 1
 fi
 
-if ! command -v docker compose &> /dev/null
+if ! command -v docker-compose &> /dev/null
 then
-    echo "Error: docker compose is not installed. Please install docker compose."
+    echo "Error: docker-compose is not installed. Please install docker-compose."
     exit 1
 fi
 
-# Script to run signal-cli-rest-api in normal mode for linking a new device using Docker Compose.
+# Script to run signal-cli-rest-api in normal mode for linking a new device.
 
 # --- Configuration ---
 CONFIG_DIR="$(pwd)/signal-cli-config"
+SERVICE_NAME="signal-cli-rest-api"
 
 # --- Main ---
-echo "Message: Starting signal-cli-rest-api in 'normal' mode for linking..."
+echo "Message: Starting ${SERVICE_NAME} in 'normal' mode for linking..."
 echo "Message: Config will be stored in: ${CONFIG_DIR}"
 
 # Create config directory if it doesn't exist
 mkdir -p "${CONFIG_DIR}"
 
-# Stop and remove existing container if it exists
-docker compose down
+# Ensure all services are stopped before linking
+echo "Message: Stopping any running services..."
+docker-compose down
 
-# Run the container in normal mode
-docker compose run --rm signal-cli-rest-api MODE=normal
+# Start the signal service in linking mode with the port exposed
+echo "Message: Running linking container. Press Ctrl+C to stop."
+echo "Message: Open http://127.0.0.1:8080/v1/qrcodelink?device_name=signal-bot in your browser."
+docker-compose run --rm --service-ports ${SERVICE_NAME} /entrypoint.sh normal
 
-echo "Message: Container stopped."
+echo "Message: Linking process finished."

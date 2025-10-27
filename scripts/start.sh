@@ -8,24 +8,18 @@ then
     exit 1
 fi
 
-if ! command -v docker compose &> /dev/null
+if ! command -v docker-compose &> /dev/null
 then
-    echo "Error: docker compose is not installed. Please install docker compose."
+    echo "Error: docker-compose is not installed. Please install docker-compose."
     exit 1
 fi
 
-# Script to start the signal-cli-rest-api container in json-rpc mode using Docker Compose.
-
-# --- Configuration ---
-CONFIG_DIR="$(pwd)/signal-cli-config"
+# Script to start all services in detached mode using Docker Compose.
 
 # --- Main ---
-echo "Message: Starting signal-cli-rest-api in 'json-rpc' mode..."
+echo "Message: Building and starting all services..."
 
-# Create config directory if it doesn't exist
-mkdir -p "${CONFIG_DIR}"
+# Start the services in detached mode and build if necessary
+docker-compose up -d --build
 
-# Start the container in detached mode
-docker compose up -d
-
-echo "Message: Container started. Use './scripts/logs.sh' to see the logs."
+echo "Message: Services started. Use './scripts/logs.sh' to see the logs."
