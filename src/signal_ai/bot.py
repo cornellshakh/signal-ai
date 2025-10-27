@@ -1,20 +1,12 @@
 import logging
 import os
+from pathlib import Path
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from signalbot import SignalBot
 
-from .commands.convert import ConvertCommand
-from .commands.hello import HelloCommand
-from .commands.help import HelpCommand
-from .commands.search_web import SearchWebCommand
-from example.attachments import AttachmentCommand
-from example.delete import DeleteCommand, DeleteCommand as ReceiveDeleteCommand
-from example.edit import EditCommand
-from example.multiple_triggered import TriggeredCommand
-from example.ping import PingCommand
-from example.regex_triggered import RegexTriggeredCommand
-from example.reply import ReplyCommand
-from example.styles import StylesCommand
+from .core.persistence import PersistenceManager
+from .commands.dispatcher import CommandDispatcher
 
 
 def main() -> None:
@@ -46,28 +38,17 @@ def main() -> None:
         }
         bot = SignalBot(config)
 
-        # enable a chat command for all contacts and all groups
-        bot.register(PingCommand())
-        bot.register(ReplyCommand())
+        # Register the unified command handler
+        bot.register(CommandDispatcher())
 
-        # enable a chat command only for groups
-        bot.register(AttachmentCommand())
+        # Initialize PersistenceManager
+        db_path = Path.home() / ".signal-ai" / "db.json"
+        persistence_manager = PersistenceManager(db_path)
 
-        # enable a chat command for one specific group with the name "My Group"
-
-        # chat command is enabled for all groups and one specific contact
-        bot.register(TriggeredCommand())
-
-        bot.register(RegexTriggeredCommand())
-
-        bot.register(EditCommand())
-        bot.register(DeleteCommand())
-        bot.register(ReceiveDeleteCommand())
-        bot.register(StylesCommand())
-        bot.register(SearchWebCommand())
-        bot.register(ConvertCommand())
-        bot.register(HelloCommand())
-        bot.register(HelpCommand())
+        # Schedule hourly backups
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(persistence_manager.backup_database, "interval", hours=1)
+        scheduler.start()
 
         bot.start()
 

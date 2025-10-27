@@ -28,7 +28,8 @@ dependencies = [
     "tzlocal",
     "websockets",
     "yarl",
-    "markitdown[all]"
+    "markitdown[all]",
+    "tinydb"
 ]
 
 [tool.poetry]

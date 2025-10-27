@@ -12,13 +12,8 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi --no-root
 
-# Install Node.js and open-websearch
-RUN apt-get update && apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g open-websearch
 
 # Copy the rest of the application code
-COPY ./src/signal_ai /app/signal_ai
+COPY ./src /app/src
 
-CMD ["python", "-m", "signal_ai.bot"]
+CMD ["python", "-m", "src.signal_ai.bot"]
