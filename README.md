@@ -94,3 +94,8 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 - **Check logs:** `./scripts/logs.sh`.
 - **Verify `.env`:** Ensure `PHONE_NUMBER` is correct.
 - **Re-link:** Run `./scripts/link.sh` again if needed.
+
+## Documentation
+
+- [Development Philosophy](docs/development_philosophy.md)
+- [Bot Interaction Flow](docs/bot_interaction_flow.md)

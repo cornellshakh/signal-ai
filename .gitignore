@@ -21,6 +21,3 @@ poetry.lock
 
 # Local data and attachments
 signal-cli-config/
-
-# Documentation
-docs/
