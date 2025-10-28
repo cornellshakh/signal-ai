@@ -12,6 +12,16 @@ from signalbot.bot import SignalBotError
 
 from .core.persistence import PersistenceManager
 from .core.message_handler import MessageHandler
+from .commands.system.help import HelpCommand
+from .commands.system.ping import PingCommand
+from .commands.config.config import ConfigCommand
+from .commands.context.context import ContextCommand
+from .commands.memory.remember import MemoryCommand
+from .commands.task.todo import TaskCommand
+from .commands.task.remind import RemindCommand
+from .commands.ai.image import ImageCommand
+from .commands.ai.search import SearchCommand
+from .commands.utility.convert import ConvertCommand
 from .core.ai_client import AIClient
 from .core.logging import configure_logging
 
@@ -116,6 +126,19 @@ def main() -> None:
 
         # Register command handlers
         bot.register(MessageHandler())
+        bot.register(HelpCommand())
+        bot.register(PingCommand())
+        if bot.persistence_manager:
+            bot.register(ConfigCommand(bot.persistence_manager))
+            bot.register(ContextCommand(bot.persistence_manager))
+            bot.register(MemoryCommand(bot.persistence_manager))
+            bot.register(TaskCommand(bot.persistence_manager))
+        if bot.scheduler:
+            bot.register(RemindCommand(bot.scheduler))
+        if bot.ai_client:
+            bot.register(ImageCommand(bot.ai_client))
+            bot.register(SearchCommand(bot.ai_client))
+        bot.register(ConvertCommand())
 
         # Initialize and attach scheduler
         scheduler = BackgroundScheduler()

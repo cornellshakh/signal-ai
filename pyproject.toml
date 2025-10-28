@@ -31,7 +31,9 @@ dependencies = [
     "markitdown[all]",
     "tinydb (>=4.8.2,<5.0.0)",
     "structlog",
-    "google-generativeai"
+    "google-generativeai",
+    "tenacity",
+    "cachetools"
 ]
 
 [tool.poetry]

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Optional
 
 from markitdown import MarkItDown
 from signalbot import Command, Context, regex_triggered
@@ -13,26 +14,17 @@ class ConvertCommand(Command):
     To use this command, send the bot a message with a file attached or text to convert.
     """
 
-    @regex_triggered(r"^!convert( .*)?$")
-    async def handle(self, c: Context) -> None:
+    @regex_triggered(r"^!utility convert(?: (.+))?$")
+    async def handle(self, c: Context, source_to_convert: Optional[str] = None) -> None:
         """Convert the attached file or message text to Markdown"""
         log.info("ConvertCommand called")
-        log.info(f"Message: {c.message.text}")
-        log.info(f"Attachments: {c.message.attachments_local_filenames}")
 
-        source_to_convert = None
-
-        # Prioritize text/URL argument after the command
-        message_text = (
-            c.message.text.split(" ", 1)[1] if len(c.message.text.split()) > 1 else None
-        )
-        if message_text:
-            source_to_convert = message_text
-        # If no text argument, check for an attachment
-        elif c.message.attachments_local_filenames:
+        if not source_to_convert and c.message.attachments_local_filenames:
             attachment_filename = c.message.attachments_local_filenames[0]
             source_to_convert = (
-                Path("/home/.local/share/signal-cli/attachments") / attachment_filename
+                Path.home()
+                / ".local/share/signal-cli/attachments"
+                / attachment_filename
             )
 
         if source_to_convert:

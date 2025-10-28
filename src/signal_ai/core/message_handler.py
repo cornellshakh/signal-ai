@@ -1,20 +1,41 @@
 import os
+import re
 import shlex
 import structlog
 from typing import TYPE_CHECKING, cast
 from signalbot import Command, Context, regex_triggered
-from ..commands.help import handle_help
-from ..commands.config import handle_config
-from ..commands.todo import handle_todo
-from ..commands.remind import handle_remind
-from ..commands.search import handle_search
-from ..commands.image import handle_image
 
 if TYPE_CHECKING:
     from signal_ai.bot import SignalAIBot
 
 
+HISTORY_WINDOW_SIZE = 4
 log = structlog.get_logger()
+
+
+def cleanup_signal_formatting(text: str) -> str:
+    """
+    Cleans up AI-generated text for a better chat experience in Signal.
+    """
+    # Convert multi-line code blocks to monospaced text within spoilers.
+    text = re.sub(r"```(?:\w+\n)?(.*?)```", r"||\`\1`||", text, flags=re.DOTALL)
+
+    # Ensure consistent list formatting
+    text = re.sub(r"^\s*\*\s+", "- ", text, flags=re.MULTILINE)
+
+    # Remove leading/trailing whitespace.
+    text = text.strip()
+
+    # Collapse more than two consecutive newlines into a maximum of two.
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    # Remove newlines between list items and other formatted lines
+    text = re.sub(r"(\n- .*\n)\n", r"\1", text)
+    text = re.sub(r"(\n\d+\..*\n)\n", r"\1", text)
+    text = re.sub(r"(\n\*[^*]+\*.*\n)\n", r"\1", text)
+
+
+    return text
 
 
 class MessageHandler(Command):
@@ -83,17 +104,14 @@ class MessageHandler(Command):
                     c,
                     f"Hello! How can I help you? Type `@{bot_name} !help` for commands.",
                 )
-                await c.react("✅")
+                await c.react("⚛️")
                 return
 
-            if text_after_mention.startswith("!"):
-                # This is a command
-                await self._handle_command(c, text_after_mention)
-            else:
+            if not text_after_mention.startswith("!"):
                 # This is a conversational message for the AI
                 await self._handle_ai_query(c, text_after_mention)
 
-            await c.react("✅")
+            await c.react("⚛️")
         except Exception as e:
             log.error("message.handle.failed", error=str(e))
             await self._reply(
@@ -101,44 +119,6 @@ class MessageHandler(Command):
                 "An unexpected error occurred. I've logged the issue for my developer to review.",
             )
             await c.react("❌")
-
-    async def _handle_command(self, c: Context, text: str):
-        """
-        Parses and dispatches a `!` command.
-        """
-        bot = cast("SignalAIBot", c.bot)
-        try:
-            parts = shlex.split(text)
-            command_name = parts[0][1:].lower()  # Remove '!'
-            args = parts[1:]
-        except ValueError:
-            await self._reply(c, "⚠️ Error: Mismatched quotes in your command.")
-            return
-
-        log.info("command.received", command_name=command_name, args=args)
-
-        if command_name == "help":
-            # Pass bot_name as an argument to handle_help
-            bot_name = os.environ.get("BOT_NAME", "BotName")
-            await handle_help(c, [bot_name] + args)
-        elif command_name == "config":
-            if bot.persistence_manager:
-                await handle_config(c, args, bot.persistence_manager)
-        elif command_name == "todo":
-            if bot.persistence_manager:
-                await handle_todo(c, args, bot.persistence_manager)
-        elif command_name == "remind":
-            if bot.scheduler:
-                await handle_remind(c, args, bot.scheduler)
-        elif command_name == "search":
-            if bot.ai_client:
-                await handle_search(c, args, bot.ai_client)
-        elif command_name == "image":
-            if bot.ai_client:
-                await handle_image(c, args, bot.ai_client)
-        else:
-            # Placeholder for other command handling logic
-            await self._reply(c, f"Unknown command: `{command_name}`.")
 
     async def _handle_ai_query(self, c: Context, text: str):
         """
@@ -148,13 +128,34 @@ class MessageHandler(Command):
 
         bot = cast("SignalAIBot", c.bot)
 
-        if bot.ai_client:
-            response = await bot.ai_client.generate_response(text)
-            await self._reply(c, response)
+        if bot.ai_client and bot.persistence_manager:
+            chat_context = bot.persistence_manager.load_context(c.message.source)
+
+            # Implement the sliding window for history
+            if len(chat_context.history) > HISTORY_WINDOW_SIZE:
+                chat_context.history = chat_context.history[-HISTORY_WINDOW_SIZE:]
+
+            # Prepare the history for the AI
+            ai_history = chat_context.history
+
+            response = await bot.ai_client.generate_response(
+                chat_id=c.message.source,
+                prompt=text,
+                history=ai_history,
+            )
+
+            # Update history
+            chat_context.history.append({"role": "user", "parts": [text]})
+            chat_context.history.append({"role": "model", "parts": [response]})
+            bot.persistence_manager.save_context(c.message.source)
+
+            # Apply final cleanup
+            final_response = cleanup_signal_formatting(response)
+            await self._reply(c, final_response)
         else:
             await self._reply(
                 c,
-                "AI client not configured. Please set the GEMINI_API_KEY environment variable.",
+                "AI client or persistence manager not configured.",
             )
 
     async def _reply(self, c: Context, message: str):
