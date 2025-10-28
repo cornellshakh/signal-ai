@@ -27,4 +27,5 @@ services:
     volumes:
       - ./src:/app/src
       - ./signal-cli-config:/home/.local/share/signal-cli
+      - ./signal-ai-data:/root/.signal-ai
     restart: unless-stopped

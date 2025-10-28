@@ -51,6 +51,8 @@ class PersistenceManager:
                 f"No existing context for chat_id: {chat_id}. Creating new one."
             )
             context = Context()
+            self._contexts[chat_id] = context
+            self.save_context(chat_id)
 
         self._contexts[chat_id] = context
         return context
@@ -74,6 +76,8 @@ class PersistenceManager:
             {"id": chat_id, "data": context.model_dump()}, Chat.id == chat_id
         )
         logging.info(f"Saved context for chat_id: {chat_id}")
+        self._db.close()
+        self._db = TinyDB(self._db_path, storage=CachingMiddleware(JSONStorage))
 
     def backup_database(self):
         """

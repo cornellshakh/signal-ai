@@ -1,23 +1,17 @@
-# Python-specific ignores
-*.pyc
-__pycache__/
-.venv/
-venv/
-dist/
-build/
-
-# VS Code-specific ignores
-.vscode/
-
-# Temporary files
-*.tmp
-*.swp
-
-# Poetry-specific ignores
-poetry.lock
-
-# Environment file
+# Environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak
+venv.bak
 
-# Local data and attachments
+# Data
+signal-ai-data/
+
+# Caches
+__pycache__/
+.mypy_cache/
+.ruff_cache/
 signal-cli-config/
