@@ -46,7 +46,7 @@ class SignalAIBot(SignalBot):
 
                 try:
                     message = await Message.parse(self._signal, raw_message)
-                except (UnknownMessageFormatError, KeyError):
+                except Exception:
                     log.warning("message_parse_error", raw_message=raw_message)
                     continue
 

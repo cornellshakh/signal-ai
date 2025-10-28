@@ -31,7 +31,7 @@ class MessageHandler(Command):
         """
         The main entry point for processing messages.
         """
-        if c.message.text is None:
+        if not c.message or c.message.text is None:
             return
 
         bot_name = os.environ.get("BOT_NAME", "BotName")
