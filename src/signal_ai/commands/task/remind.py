@@ -31,7 +31,9 @@ class RemindCommand(BaseCommand):
             return
 
         if len(args) < 3:
-            await c.reply("Usage: `!remind (in|at) <time> <message>`", text_mode="styled")
+            await c.reply(
+                "Usage: `!remind (in|at) <time> <message>`", text_mode="styled"
+            )
             return
 
         when_type = args[0]

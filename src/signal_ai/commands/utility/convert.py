@@ -1,10 +1,9 @@
 import logging
 from pathlib import Path
-from typing import List, cast
+from typing import List
 
 from markitdown import MarkItDown
 from signalbot import Context
-from ...bot import SignalAIBot
 from ...core.command import BaseCommand
 
 log = logging.getLogger(__name__)

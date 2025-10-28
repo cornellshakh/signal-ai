@@ -35,7 +35,9 @@ class ConfigCommand(BaseCommand):
             return
 
         if not args:
-            await c.reply("Usage: `!config [view|set] [key] [value]`", text_mode="styled")
+            await c.reply(
+                "Usage: `!config [view|set] [key] [value]`", text_mode="styled"
+            )
             return
 
         sub_command = args[0]

@@ -19,8 +19,6 @@ dependencies = [
     "packaging",
     "phonenumbers",
     "propcache",
-    "pydantic",
-    "pydantic-core",
     "python-dotenv",
     "signalbot",
     "typing-extensions",

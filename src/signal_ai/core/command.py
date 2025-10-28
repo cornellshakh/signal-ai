@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Any, Optional, Dict
 
 from signalbot import Context
 
@@ -19,8 +19,13 @@ class BaseCommand(ABC):
         """A short description of the command."""
         pass
 
+    @property
+    def ArgsSchema(self) -> Optional[Dict[str, Any]]:
+        """The OpenAPI schema for the command's arguments."""
+        return None
+
     @abstractmethod
-    async def handle(self, c: Context, args: List[str]) -> None:
+    async def handle(self, c: Context, args: Optional[Any] = None) -> None:
         """The main execution logic for the command."""
         pass
 

@@ -58,7 +58,7 @@ class ContextCommand(BaseCommand):
 
             # Get the requested number of messages, or all if there are fewer
             start_index = max(0, len(history) - num_messages)
-            
+
             formatted_history = []
             for i, item in enumerate(history[start_index:], start=start_index + 1):
                 role = item.get("role", "unknown").capitalize()
@@ -67,12 +67,16 @@ class ContextCommand(BaseCommand):
                 formatted_history.append(f"_{i}_. *{role}*:\n{content}")
 
             full_history = "\n\n".join(formatted_history)
-            
+
             # Split the message into chunks of 4000 characters
             max_len = 4000
-            chunks = [full_history[i:i+max_len] for i in range(0, len(full_history), max_len)]
-            
+            chunks = [
+                full_history[i : i + max_len]
+                for i in range(0, len(full_history), max_len)
+            ]
+
             import asyncio
+
             for chunk in chunks:
                 await c.reply(chunk, text_mode="styled")
                 await asyncio.sleep(1)
@@ -87,7 +91,8 @@ class ContextCommand(BaseCommand):
                 ai_client.clear_chat_session(c.message.source)
 
             await c.reply(
-                "Chat history and AI session cache have been cleared.", text_mode="styled"
+                "Chat history and AI session cache have been cleared.",
+                text_mode="styled",
             )
         else:
             await c.reply(f"Unknown subcommand: `{sub_command}`.", text_mode="styled")

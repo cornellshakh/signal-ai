@@ -12,7 +12,11 @@ class Context(BaseModel):
     """Represents the context of a single chat."""
 
     config: BotConfig = Field(default_factory=BotConfig)
-    pinned_message: str = Field(default="", description="A pinned message for core context.")
+    pinned_message: str = Field(
+        default="", description="A pinned message for core context."
+    )
     history: List[Dict[str, Any]] = Field(default_factory=list)
     todos: List[str] = Field(default_factory=list)
-    is_initialized: bool = Field(default=False, description="Whether the context has been initialized.")
+    is_initialized: bool = Field(
+        default=False, description="Whether the context has been initialized."
+    )

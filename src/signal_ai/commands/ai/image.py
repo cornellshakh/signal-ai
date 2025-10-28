@@ -14,10 +14,7 @@ class ImageCommand(BaseCommand):
         return "Generates an image based on a prompt."
 
     def help(self) -> str:
-        return (
-            "Usage: `!image [prompt]`\n\n"
-            "Generates an image based on a prompt."
-        )
+        return "Usage: `!image [prompt]`\n\n" "Generates an image based on a prompt."
 
     async def handle(self, c: Context, args: List[str]) -> None:
         bot = cast("SignalAIBot", c.bot)

@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import cast, Optional, Dict, Any
 from signalbot import Context
 from ...bot import SignalAIBot
 from ...core.command import BaseCommand
@@ -13,6 +13,19 @@ class MemoryCommand(BaseCommand):
     def description(self) -> str:
         return "Manages the bot's long-term memory for this chat."
 
+    @property
+    def ArgsSchema(self) -> Optional[Dict[str, Any]]:
+        return {
+            "type": "object",
+            "properties": {
+                "sub_command": {
+                    "type": "string",
+                    "description": "The subcommand to execute (set or clear).",
+                },
+                "text": {"type": "string", "description": "The text to remember."},
+            },
+        }
+
     def help(self) -> str:
         return (
             "Usage: `!memory [set|clear] [text]`\n\n"
@@ -23,14 +36,17 @@ class MemoryCommand(BaseCommand):
             "- `clear`: Clear the pinned message."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
+    async def handle(self, c: Context, args: Dict[str, Any]) -> None:
         bot = cast("SignalAIBot", c.bot)
         persistence_manager = bot.persistence_manager
         if not persistence_manager:
             await c.reply("Persistence manager not available.")
             return
 
-        if not args:
+        sub_command = args.get("sub_command")
+        text = args.get("text")
+
+        if not sub_command:
             chat_context = persistence_manager.load_context(c.message.source)
             if chat_context.pinned_message:
                 await c.reply(
@@ -44,20 +60,16 @@ class MemoryCommand(BaseCommand):
                 )
             return
 
-        sub_command = args[0]
         chat_context = persistence_manager.load_context(c.message.source)
 
         if sub_command == "set":
-            if len(args) < 2:
+            if not text:
                 await c.reply("Usage: `!memory set [text]`", text_mode="styled")
                 return
 
-            value = " ".join(args[1:])
-            chat_context.pinned_message = value
+            chat_context.pinned_message = text
             persistence_manager.save_context(c.message.source)
-            await c.reply(
-                f"**Pinned message updated:**\n{value}", text_mode="styled"
-            )
+            await c.reply(f"**Pinned message updated:**\n{text}", text_mode="styled")
 
         elif sub_command == "clear":
             chat_context.pinned_message = ""

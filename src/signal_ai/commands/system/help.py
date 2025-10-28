@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import cast, Dict, Any
 from signalbot import Context
 from ...bot import SignalAIBot
 from ...core.command import BaseCommand
@@ -13,23 +13,23 @@ class HelpCommand(BaseCommand):
     def description(self) -> str:
         return "Shows available commands."
 
-    async def handle(self, c: Context, args: List[str]) -> None:
+    async def handle(self, c: Context, args: Dict[str, Any]) -> None:
         bot = cast("SignalAIBot", c.bot)
-        dispatcher = bot.dispatcher
-        if not dispatcher:
-            await c.reply("Command dispatcher not available.")
+        tool_manager = bot.tool_manager
+        if not tool_manager:
+            await c.reply("Tool manager not available.")
             return
 
-        if args:
-            command_name = args[0]
-            if command_name in dispatcher.commands:
-                command = dispatcher.commands[command_name]
+        command_name = args.get("command_name")
+        if command_name:
+            if command_name in tool_manager.tools:
+                command = tool_manager.tools[command_name]
                 help_text = command.help()
             else:
                 help_text = f"Unknown command: `{command_name}`"
         else:
             help_text = "*Available Commands:*\n"
-            for name, command in sorted(dispatcher.commands.items()):
+            for name, command in sorted(tool_manager.tools.items()):
                 help_text += f"- `{name}`: {command.description}\n"
             help_text += "\nRun `!help [command]` for more details."
 

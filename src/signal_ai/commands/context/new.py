@@ -1,12 +1,9 @@
-import shlex
-import copy
 import re
 from typing import List, cast
 
-from signalbot import Context, Message
+from signalbot import Context
 
 from ...bot import SignalAIBot
-from ...core.ai_client import AIClient
 from ...core.decorators import command
 
 
@@ -34,15 +31,19 @@ class NewConversationCommand:
         try:
             # Generate a group name from the prompt
             try:
-                group_name_prompt = bot.prompt_manager.get("generate_group_name", prompt=prompt)
+                group_name_prompt = bot.prompt_manager.get(
+                    "generate_group_name", prompt=prompt
+                )
             except ValueError:
-                await c.reply("I can't generate a group name right now. The required prompt is missing from my configuration.")
+                await c.reply(
+                    "I can't generate a group name right now. The required prompt is missing from my configuration."
+                )
                 return
             group_name = await bot.ai_client.generate_response(
                 chat_id=c.message.source, prompt=group_name_prompt, history=[]
             )
             # Sanitize the group name to remove markdown characters
-            group_name = re.sub(r'[*_~`[\]()]', "", group_name.strip().strip('"'))
+            group_name = re.sub(r"[*_~`[\]()]", "", group_name.strip().strip('"'))
 
             # Create the group
             user_uuid = c.message.source_uuid

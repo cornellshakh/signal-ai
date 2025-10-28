@@ -14,10 +14,12 @@ from .core.persistence import PersistenceManager
 from .core.message_handler import MessageHandler
 from .core.ai_client import AIClient
 from .core.logging import configure_logging
-from .core.dispatcher import CommandDispatcher
+from .core.tool_manager import ToolManager
 from .core.group_manager import GroupManager
 from .core.prompt_manager import PromptManager
-from . import commands
+from .core.memory_manager import MemoryManager, ShortTermMemoryBackend
+from .core.reasoning_engine import ReasoningEngine
+from . import commands, tools
 
 
 log = structlog.get_logger()
@@ -38,10 +40,12 @@ class SignalAIBot(SignalBot):
         self.persistence_manager: Optional[PersistenceManager] = None
         self.scheduler: Optional[BackgroundScheduler] = None
         self.ai_client: Optional[AIClient] = None
-        self.dispatcher: Optional[CommandDispatcher] = None
+        self.tool_manager: Optional[ToolManager] = None
         self.message_handler: Optional[MessageHandler] = None
         self.group_manager: Optional[GroupManager] = None
         self.prompt_manager: Optional[PromptManager] = None
+        self.memory_manager: Optional[MemoryManager] = None
+        self.reasoning_engine: Optional[ReasoningEngine] = None
 
     async def _produce(self, name: int) -> None:
         """
@@ -84,7 +88,10 @@ class SignalAIBot(SignalBot):
 
                             # If the destination is not the bot's own number, it's an echo of a message
                             # sent to another user. We must ignore it to prevent loops.
-                            if destination and destination != self.config["phone_number"]:
+                            if (
+                                destination
+                                and destination != self.config["phone_number"]
+                            ):
                                 log.info(
                                     "message.filtered",
                                     reason="Echo of an outgoing message to another user",
@@ -174,14 +181,30 @@ def main() -> None:
         # Initialize and attach PromptManager
         bot.prompt_manager = PromptManager()
 
+        # Initialize and attach MemoryManager
+        if bot.persistence_manager:
+            short_term_memory = ShortTermMemoryBackend(bot.persistence_manager)
+            bot.memory_manager = MemoryManager(backend=short_term_memory)
+
         # Initialize and attach AIClient
         api_key = os.environ.get("GEMINI_API_KEY")
-        if api_key and bot.prompt_manager:
-            bot.ai_client = AIClient(api_key, prompt_manager=bot.prompt_manager)
+        if api_key and bot.prompt_manager and bot.memory_manager:
+            bot.ai_client = AIClient(
+                api_key,
+                prompt_manager=bot.prompt_manager,
+                memory_manager=bot.memory_manager,
+            )
 
-        # Initialize and attach CommandDispatcher and MessageHandler
-        bot.dispatcher = CommandDispatcher(commands)
-        bot.message_handler = MessageHandler(bot.dispatcher)
+        # Initialize and attach ToolManager and MessageHandler
+        bot.tool_manager = ToolManager(command_package=commands, tool_package=tools)
+        if bot.ai_client and bot.tool_manager:
+            bot.reasoning_engine = ReasoningEngine(
+                ai_client=bot.ai_client, tool_manager=bot.tool_manager
+            )
+        if bot.reasoning_engine:
+            bot.message_handler = MessageHandler(
+                dispatcher=bot.tool_manager, reasoning_engine=bot.reasoning_engine
+            )
         bot.group_manager = GroupManager(bot)
 
         # Initialize and attach scheduler
