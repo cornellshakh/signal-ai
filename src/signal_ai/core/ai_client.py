@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, AsyncGenerator
 import google.generativeai as genai
 from google.generativeai.generative_models import ChatSession
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -45,10 +45,9 @@ class AIClient:
         Returns:
             The ChatSession object.
         """
-        if chat_id not in self._chat_sessions:
-            logging.info(f"Creating new chat session for chat_id: {chat_id}")
-            self._chat_sessions[chat_id] = self.model.start_chat(history=history)
-        return self._chat_sessions[chat_id]
+        # Always create a new chat session for each request to ensure isolation
+        logging.info(f"Creating new chat session for chat_id: {chat_id}")
+        return self.model.start_chat(history=history)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def generate_response(
@@ -72,6 +71,33 @@ class AIClient:
             return response.text
         except Exception as e:
             logging.error(f"Error generating AI response: {e}", exc_info=True)
+            if chat_id in self._chat_sessions:
+                del self._chat_sessions[chat_id]
+            raise
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    async def generate_response_stream(
+        self, chat_id: str, prompt: str, history: List[Dict[str, Any]]
+    ) -> AsyncGenerator[str, None]:
+        """
+        Generates a streaming response from the AI model.
+
+        Args:
+            chat_id: The unique identifier for the chat.
+            prompt: The input prompt for the AI.
+            history: The chat history.
+
+        Yields:
+            Chunks of the AI-generated response as they become available.
+        """
+        logging.info(f"Generating AI stream for chat_id: {chat_id}, prompt: '{prompt}'")
+        try:
+            chat_session = self._get_chat_session(chat_id, history)
+            stream = await chat_session.send_message_async(prompt, stream=True)
+            async for chunk in stream:
+                yield chunk.text
+        except Exception as e:
+            logging.error(f"Error generating AI stream: {e}", exc_info=True)
             if chat_id in self._chat_sessions:
                 del self._chat_sessions[chat_id]
             raise

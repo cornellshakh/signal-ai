@@ -10,6 +10,15 @@ class ContextCommand(Command):
     def describe(self) -> str:
         return "Manages the chat context."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!context <view|clear>`\n\n"
+            "Manages the bot's short-term memory for the current conversation.\n\n"
+            "**Subcommands:**\n"
+            "- `view`: Show the current chat history.\n"
+            "- `clear`: Clear the current chat history."
+        )
+
     @regex_triggered(r"^!context(?: (view|clear))?$")
     async def handle(self, c: Context, sub_command: Optional[str] = None) -> None:
         if not sub_command:

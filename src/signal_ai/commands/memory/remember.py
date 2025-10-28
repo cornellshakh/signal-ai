@@ -10,6 +10,16 @@ class MemoryCommand(Command):
     def describe(self) -> str:
         return "Manages the bot's long-term memory for this chat."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!memory [set|clear] [text]`\n\n"
+            "Manages the bot's long-term memory for this chat.\n"
+            "This is a 'pinned message' that will be included in all future AI interactions.\n\n"
+            "**Subcommands:**\n"
+            "- `set [text]`: Set the pinned message.\n"
+            "- `clear`: Clear the pinned message."
+        )
+
     @regex_triggered(r"^!memory(?: (set|clear)(?: (.+))?)?$")
     async def handle(
         self, c: Context, sub_command: Optional[str] = None, value: Optional[str] = None

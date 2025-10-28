@@ -10,6 +10,20 @@ class ConfigCommand(Command):
     def describe(self) -> str:
         return "Manages the bot's configuration for this chat."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!config [view|set] [key] [value]`\n\n"
+            "Manages the bot's configuration for this chat.\n\n"
+            "**Subcommands:**\n"
+            "- `view`: Show the current configuration.\n"
+            "- `set`: Set a configuration key.\n\n"
+            "**Available keys for `set`:**\n"
+            "- `mode`: Set the chat mode.\n"
+            "  - `ai`: The bot will respond to messages using the AI model.\n"
+            "  - `quiet`: The bot will not respond to messages unless explicitly commanded.\n"
+            "  - `parrot`: The bot will repeat any message it receives."
+        )
+
     @regex_triggered(r"^!config(?: (view|set)(?: (\w+)(?: (.+))?)?)?$")
     async def handle(
         self,

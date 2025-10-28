@@ -10,6 +10,16 @@ class TaskCommand(Command):
     def describe(self) -> str:
         return "Manages the to-do list for this chat."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!task [add|list|done] [args...]`\n\n"
+            "Manages the to-do list for this chat.\n\n"
+            "**Subcommands:**\n"
+            "- `add [item]`: Add an item to the to-do list.\n"
+            "- `list`: Show the to-do list.\n"
+            "- `done [index]`: Mark an item as done."
+        )
+
     @regex_triggered(r"^!task(?: (add|list|done)(?: (.+))?)?$")
     async def handle(
         self, c: Context, sub_command: Optional[str] = None, value: Optional[str] = None

@@ -10,6 +10,12 @@ class ImageCommand(Command):
     def describe(self) -> str:
         return "Generates an image based on a prompt."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!ai image [prompt]`\n\n"
+            "Generates an image based on a prompt."
+        )
+
     @regex_triggered(r"^!ai image (.+)")
     async def handle(self, c: Context, prompt: str) -> None:
         # This is a placeholder. In a real implementation, you would generate an image

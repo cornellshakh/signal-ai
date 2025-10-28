@@ -11,6 +11,15 @@ class RemindCommand(Command):
     def describe(self) -> str:
         return "Sets a reminder."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!task remind (in|at) <time> <message>`\n\n"
+            "Sets a reminder.\n\n"
+            "**Subcommands:**\n"
+            "- `in <time> <message>`: Set a reminder in a relative amount of time (e.g., `10s`, `5m`, `1h`).\n"
+            "- `at <time> <message>`: Set a reminder at a specific time (e.g., `14:30`)."
+        )
+
     @regex_triggered(r"^!task remind (in|at) (.+?) (.+)")
     async def handle(
         self, c: Context, when_type: str, time_str: str, message: str

@@ -1,9 +1,11 @@
+import asyncio
 import os
 import re
 import shlex
+import time
 import structlog
-from typing import TYPE_CHECKING, cast
-from signalbot import Command, Context, regex_triggered
+from typing import TYPE_CHECKING, cast, Optional
+from signalbot import Command, Context, Message, regex_triggered
 
 if TYPE_CHECKING:
     from signal_ai.bot import SignalAIBot
@@ -51,6 +53,18 @@ class MessageHandler(Command):
     async def handle(self, c: Context):
         """
         The main entry point for processing messages.
+        This method now creates a background task to handle the message asynchronously.
+        """
+        if not c.message or c.message.text is None:
+            return
+
+        # We are creating a task to process the message in the background.
+        # This allows the bot to quickly acknowledge the message and be ready for the next one.
+        asyncio.create_task(self._process_message_async(c))
+
+    async def _process_message_async(self, c: Context):
+        """
+        The actual message processing logic, run as a background task.
         """
         if not c.message or c.message.text is None:
             return
@@ -109,54 +123,86 @@ class MessageHandler(Command):
 
             if not text_after_mention.startswith("!"):
                 # This is a conversational message for the AI
-                await self._handle_ai_query(c, text_after_mention)
+                await self._handle_ai_query_stream(c, text_after_mention)
 
             await c.react("⚛️")
         except Exception as e:
-            log.error("message.handle.failed", error=str(e))
+            log.error("message.handle.failed", error=str(e), exc_info=True)
             await self._reply(
                 c,
-                "An unexpected error occurred. I've logged the issue for my developer to review.",
+                "An unexpected error occurred while processing your message. The issue has been logged.",
             )
             await c.react("❌")
 
-    async def _handle_ai_query(self, c: Context, text: str):
+    async def _handle_ai_query_stream(self, c: Context, text: str):
         """
-        Handles a natural language query meant for the AI.
+        Handles a natural language query meant for the AI, with streaming.
         """
         log.info("ai_query.received", query=text)
 
         bot = cast("SignalAIBot", c.bot)
 
-        if bot.ai_client and bot.persistence_manager:
-            chat_context = bot.persistence_manager.load_context(c.message.source)
+        if not bot.ai_client or not bot.persistence_manager:
+            await self._reply(c, "AI client or persistence manager not configured.")
+            return
 
-            # Implement the sliding window for history
-            if len(chat_context.history) > HISTORY_WINDOW_SIZE:
-                chat_context.history = chat_context.history[-HISTORY_WINDOW_SIZE:]
+        chat_context = bot.persistence_manager.load_context(c.message.source)
 
-            # Prepare the history for the AI
-            ai_history = chat_context.history
+        # Implement the sliding window for history
+        if len(chat_context.history) > HISTORY_WINDOW_SIZE:
+            chat_context.history = chat_context.history[-HISTORY_WINDOW_SIZE:]
 
-            response = await bot.ai_client.generate_response(
+        ai_history = chat_context.history
+
+        # Prepare for streaming
+        full_response = ""
+        sent_message_timestamp: Optional[int] = None
+        last_update_time = 0
+        UPDATE_INTERVAL = 0.5  # seconds
+
+        try:
+            stream = bot.ai_client.generate_response_stream(
                 chat_id=c.message.source,
                 prompt=text,
                 history=ai_history,
             )
 
-            # Update history
+            async for chunk in stream:
+                full_response += chunk
+                current_time = time.time()
+
+                if sent_message_timestamp is None:
+                    # Send the first chunk as a new message and get its timestamp
+                    # Send the first chunk as a new message and get its timestamp
+                    sent_message_timestamp = await c.reply(
+                        cleanup_signal_formatting(full_response) or "...",
+                        text_mode="styled",
+                    )
+                    last_update_time = current_time
+                elif current_time - last_update_time > UPDATE_INTERVAL:
+                    # Edit the message with the updated content
+                    await c.edit(
+                        cleanup_signal_formatting(full_response),
+                        edit_timestamp=sent_message_timestamp,
+                    )
+                    last_update_time = current_time
+
+            # Ensure the final message is sent
+            if sent_message_timestamp:
+                await c.edit(
+                    cleanup_signal_formatting(full_response),
+                    edit_timestamp=sent_message_timestamp,
+                )
+
+            # Update history with the complete response
             chat_context.history.append({"role": "user", "parts": [text]})
-            chat_context.history.append({"role": "model", "parts": [response]})
+            chat_context.history.append({"role": "model", "parts": [full_response]})
             bot.persistence_manager.save_context(c.message.source)
 
-            # Apply final cleanup
-            final_response = cleanup_signal_formatting(response)
-            await self._reply(c, final_response)
-        else:
-            await self._reply(
-                c,
-                "AI client or persistence manager not configured.",
-            )
+        except Exception as e:
+            log.error("ai_query_stream.failed", error=str(e), exc_info=True)
+            await self._reply(c, "An error occurred while streaming the AI response.")
+            await c.react("❌")
 
     async def _reply(self, c: Context, message: str):
         """

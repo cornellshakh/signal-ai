@@ -10,6 +10,12 @@ class SearchCommand(Command):
     def describe(self) -> str:
         return "Searches the web and summarizes the results."
 
+    def help(self) -> str:
+        return (
+            "Usage: `!ai search [query]`\n\n"
+            "Searches the web and summarizes the results."
+        )
+
     @regex_triggered(r"^!ai search (.+)")
     async def handle(self, c: Context, query: str) -> None:
         prompt = f"Summarize the following web search query: {query}"

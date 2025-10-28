@@ -55,6 +55,49 @@ class SignalAIBot(SignalBot):
                 log.debug("message.received.raw", raw_message=raw_message)
 
                 try:
+                    # Attempt to parse the raw message as JSON to inspect its contents
+                    parsed_message = json.loads(raw_message)
+                    envelope = parsed_message.get("envelope", {})
+
+                    # Filter out non-essential message types that don't contain user content
+                    if "receiptMessage" in envelope or "typingMessage" in envelope:
+                        log.info(
+                            "message.filtered",
+                            reason="Receipt or typing message",
+                            filtered_message=parsed_message,
+                        )
+                        continue
+
+                    # Handle sync messages intelligently to distinguish echoes from new messages
+                    if "syncMessage" in envelope:
+                        sync_message_data = envelope.get("syncMessage", {})
+                        if "sentMessage" in sync_message_data:
+                            sent_message = sync_message_data.get("sentMessage", {})
+                            destination = sent_message.get("destination")
+
+                            # If the destination is not the bot's own number, it's an echo of a message
+                            # sent to another user. We must ignore it to prevent loops.
+                            if destination and destination != self.config["phone_number"]:
+                                log.info(
+                                    "message.filtered",
+                                    reason="Echo of an outgoing message to another user",
+                                    filtered_message=parsed_message,
+                                )
+                                continue
+                            # If the destination is the bot's own number, it's a "note to self" and should be processed.
+                        # Note: Incoming messages from a user's linked device (like "note to self")
+                        # can also arrive as a syncMessage with a 'dataMessage', so they are NOT filtered here.
+
+                except (json.JSONDecodeError, TypeError):
+                    # If it's not valid JSON, it's unlikely to be a message we want to process
+                    log.warning(
+                        "message.filter.failed",
+                        reason="Non-JSON message",
+                        raw_message=raw_message,
+                    )
+                    continue
+
+                try:
                     message = await Message.parse(self._signal, raw_message)
                 except Exception:
                     try:
@@ -126,7 +169,7 @@ def main() -> None:
 
         # Register command handlers
         bot.register(MessageHandler())
-        bot.register(HelpCommand())
+        bot.register(HelpCommand(bot))
         bot.register(PingCommand())
         if bot.persistence_manager:
             bot.register(ConfigCommand(bot.persistence_manager))

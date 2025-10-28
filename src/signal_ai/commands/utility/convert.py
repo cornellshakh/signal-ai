@@ -14,6 +14,15 @@ class ConvertCommand(Command):
     To use this command, send the bot a message with a file attached or text to convert.
     """
 
+    def describe(self) -> str:
+        return "Converts a file, URL, or text to Markdown."
+
+    def help(self) -> str:
+        return (
+            "Usage: `!utility convert [file|URL|text]`\n\n"
+            "Converts a file, URL, or text to Markdown."
+        )
+
     @regex_triggered(r"^!utility convert(?: (.+))?$")
     async def handle(self, c: Context, source_to_convert: Optional[str] = None) -> None:
         """Convert the attached file or message text to Markdown"""
