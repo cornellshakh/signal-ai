@@ -1,4 +1,5 @@
 import os
+import json
 from asyncio import Queue
 import structlog
 from pathlib import Path
@@ -39,15 +40,25 @@ class SignalAIBot(SignalBot):
         """
         Overridden to handle KeyError when parsing messages.
         """
-        log.info("producer_started", producer_name=name)
+        log.info("producer.started", producer_name=name)
         try:
             async for raw_message in self._signal.receive():
-                log.debug("raw_message_received", raw_message=raw_message)
+                log.debug("message.received.raw", raw_message=raw_message)
 
                 try:
                     message = await Message.parse(self._signal, raw_message)
                 except Exception:
-                    log.warning("message_parse_error", raw_message=raw_message)
+                    try:
+                        # Try to parse the raw message as JSON for structured logging
+                        parsed_message = json.loads(raw_message)
+                        log.warning("message.parse.failed", parsed_message=parsed_message)
+                    except (json.JSONDecodeError, TypeError):
+                        # Fallback for non-JSON or already-decoded messages
+                        log.warning(
+                            "message.parse.failed",
+                            reason="unparseable",
+                            raw_message=raw_message,
+                        )
                     continue
 
                 # Update groups if message is from an unknown group
@@ -71,8 +82,8 @@ def main() -> None:
         signal_service = os.environ.get("SIGNAL_SERVICE")
         phone_number = os.environ.get("PHONE_NUMBER")
 
-        log.info("signal_service_configured", signal_service=signal_service)
-        log.info("phone_number_configured", phone_number=phone_number)
+        log.info("bot.configured.signal_service", signal_service=signal_service)
+        log.info("bot.configured.phone_number", phone_number=phone_number)
 
         config = {
             "signal_service": signal_service,
@@ -103,7 +114,7 @@ def main() -> None:
         bot.start()
 
     except Exception as e:
-        log.error("an_error_occurred", error=str(e))
+        log.error("bot.error", error=str(e))
 
 
 if __name__ == "__main__":

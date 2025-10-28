@@ -34,6 +34,13 @@ class MessageHandler(Command):
         if not c.message or c.message.text is None:
             return
 
+        # Bind key message info to the logging context for this request
+        structlog.contextvars.bind_contextvars(
+            source_uuid=c.message.source_uuid,
+            source_number=c.message.source_number,
+            timestamp=c.message.timestamp,
+        )
+
         bot_name = os.environ.get("BOT_NAME", "BotName")
         is_group_chat = c.message.group is not None
         text = c.message.text.strip()
@@ -49,7 +56,7 @@ class MessageHandler(Command):
         bot = cast("SignalAIBot", c.bot)
 
         if bot.persistence_manager is None:
-            log.error("persistence_manager_not_initialized")
+            log.error("persistence_manager.not_initialized")
             return
 
         chat_context = bot.persistence_manager.load_context(c.message.source)
@@ -57,7 +64,7 @@ class MessageHandler(Command):
         # Don't respond if mode is 'quiet'
         if chat_context.config.mode == "quiet":
             log.info(
-                "quiet_mode_enabled",
+                "bot.quiet_mode_enabled",
                 chat_source=c.message.source,
             )
             return
@@ -92,7 +99,7 @@ class MessageHandler(Command):
             await c.stop_typing()
             await c.react("✅")
         except Exception as e:
-            log.error("message_handling_error", error=str(e))
+            log.error("message.handle.failed", error=str(e))
             await self._reply(
                 c,
                 "An unexpected error occurred. I've logged the issue for my developer to review.",
@@ -113,7 +120,7 @@ class MessageHandler(Command):
             await self._reply(c, "⚠️ Error: Mismatched quotes in your command.")
             return
 
-        log.info("handling_command", command_name=command_name, args=args)
+        log.info("command.received", command_name=command_name, args=args)
 
         if command_name == "help":
             # Pass bot_name as an argument to handle_help
@@ -142,7 +149,7 @@ class MessageHandler(Command):
         """
         Handles a natural language query meant for the AI.
         """
-        log.info("handling_ai_query", query=text)
+        log.info("ai_query.received", query=text)
 
         bot = cast("SignalAIBot", c.bot)
 
