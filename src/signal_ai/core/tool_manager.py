@@ -98,14 +98,7 @@ class ToolManager:
         command_name = parts[0].lstrip("!")
         args = parts[1:]
 
-        if command_name == "help" and args:
-            command = self.tools.get("help")
-            if command:
-                args_dict = {"command_name": args[0]}
-                await command.handle(context, args_dict)
-                return
-        else:
-            command = self.tools.get(command_name)
+        command = self.tools.get(command_name)
 
         if command:
             try:
