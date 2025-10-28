@@ -13,6 +13,18 @@ class HelpCommand(BaseCommand):
     def description(self) -> str:
         return "Shows available commands."
 
+    @property
+    def ArgsSchema(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "command_name": {
+                    "type": "string",
+                    "description": "The name of the command to get help for.",
+                },
+            },
+        }
+
     async def handle(self, c: Context, args: Dict[str, Any]) -> None:
         bot = cast("SignalAIBot", c.bot)
         tool_manager = bot.tool_manager

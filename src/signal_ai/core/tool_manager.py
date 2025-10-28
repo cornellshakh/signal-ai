@@ -1,7 +1,7 @@
 import importlib
 import inspect
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Union
 
 import structlog
 from google.generativeai.types import FunctionDeclaration
@@ -102,18 +102,18 @@ class ToolManager:
 
         if command:
             try:
+                final_args: Union[Dict[str, Any], str]
                 if command.ArgsSchema:
-                    args_dict = {}
-                    # This is a simplified parser. It assumes arguments are passed in order.
-                    # A more robust implementation would be needed for complex scenarios.
+                    args_dict: Dict[str, Any] = {}
                     schema_properties = command.ArgsSchema.get("properties", {})
                     arg_names = list(schema_properties.keys())
                     for i, arg_name in enumerate(arg_names):
                         if i < len(args):
                             args_dict[arg_name] = args[i]
-                    await command.handle(context, args_dict)
+                    final_args = args_dict
                 else:
-                    await command.handle(context, " ".join(args))
+                    final_args = " ".join(args)
+                await command.handle(context, final_args)
             except Exception as e:
                 log.error(
                     "tool.dispatch.failed",
