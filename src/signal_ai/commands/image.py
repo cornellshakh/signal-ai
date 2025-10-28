@@ -7,7 +7,7 @@ async def handle_image(c: Context, args: list[str], ai_client: AIClient):
     Handles the !image command.
     """
     if not args:
-        await c.reply("Usage: `!image [prompt]`")
+        await c.reply("Usage: `!image [prompt]`", text_mode="styled")
         return
 
     prompt = " ".join(args)
@@ -16,4 +16,4 @@ async def handle_image(c: Context, args: list[str], ai_client: AIClient):
     response = await ai_client.generate_response(
         f"Create an image based on the prompt: {prompt}"
     )
-    await c.reply(response)
+    await c.reply(response, text_mode="styled")

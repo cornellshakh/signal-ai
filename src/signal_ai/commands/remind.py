@@ -8,7 +8,7 @@ async def handle_remind(c: Context, args: list[str], scheduler: BackgroundSchedu
     Handles the !remind command.
     """
     if len(args) < 3:
-        await c.reply("Usage: `!remind [in|at] [time] [message]`")
+        await c.reply("Usage: `!remind [in|at] [time] [message]`", text_mode="styled")
         return
 
     when_type = args[0].lower()
@@ -31,15 +31,21 @@ async def handle_remind(c: Context, args: list[str], scheduler: BackgroundSchedu
 
             run_date = datetime.now() + delta
             scheduler.add_job(
-                c.reply, "date", run_date=run_date, args=[f"Reminder: {message}"]
+                c.reply,
+                "date",
+                run_date=run_date,
+                args=[f"Reminder: {message}"],
+                kwargs={"text_mode": "styled"},
             )
             await c.reply(
-                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
+                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}.",
+                text_mode="styled",
             )
 
         except (ValueError, IndexError):
             await c.reply(
-                "Invalid time format for 'in'. Use something like `10s`, `5m`, or `1h`."
+                "Invalid time format for 'in'. Use something like `10s`, `5m`, or `1h`.",
+                text_mode="styled",
             )
             return
 
@@ -55,15 +61,20 @@ async def handle_remind(c: Context, args: list[str], scheduler: BackgroundSchedu
                 )  # if time is in the past, schedule for tomorrow
 
             scheduler.add_job(
-                c.reply, "date", run_date=run_date, args=[f"Reminder: {message}"]
+                c.reply,
+                "date",
+                run_date=run_date,
+                args=[f"Reminder: {message}"],
+                kwargs={"text_mode": "styled"},
             )
             await c.reply(
-                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
+                f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}.",
+                text_mode="styled",
             )
 
         except ValueError:
-            await c.reply("Invalid time format for 'at'. Use HH:MM.")
+            await c.reply("Invalid time format for 'at'. Use HH:MM.", text_mode="styled")
             return
 
     else:
-        await c.reply("Usage: `!remind [in|at] [time] [message]`")
+        await c.reply("Usage: `!remind [in|at] [time] [message]`", text_mode="styled")

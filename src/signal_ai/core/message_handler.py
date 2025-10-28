@@ -162,4 +162,4 @@ class MessageHandler(Command):
         Sends a reply to the user, using a direct reply in DMs
         and a mention-reply in group chats.
         """
-        await c.reply(message)
+        await c.reply(message, text_mode="styled")

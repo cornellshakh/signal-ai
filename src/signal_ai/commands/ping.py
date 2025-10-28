@@ -7,4 +7,4 @@ class PingCommand(Command):
 
     @triggered("ping")
     async def handle(self, c: Context) -> None:
-        await c.send("pong")
+        await c.send("pong", text_mode="styled")

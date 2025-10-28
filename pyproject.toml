@@ -30,7 +30,8 @@ dependencies = [
     "yarl",
     "markitdown[all]",
     "tinydb (>=4.8.2,<5.0.0)",
-    "structlog"
+    "structlog",
+    "google-generativeai"
 ]
 
 [tool.poetry]

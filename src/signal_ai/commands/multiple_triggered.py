@@ -8,4 +8,4 @@ class TriggeredCommand(Command):
     # add case_sensitive=True for case sensitive triggers
     @triggered("command_1", "Command_2", "CoMmAnD_3")
     async def handle(self, c: Context) -> None:
-        await c.send("I am triggered")
+        await c.send("I am triggered", text_mode="styled")

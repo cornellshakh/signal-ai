@@ -15,3 +15,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 signal-cli-config/
+
+# Editor configs
+.vscode/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

@@ -22,4 +22,4 @@ async def handle_help(c: Context, args: list[str]):
 - `@{bot_name} !search [query]`: Searches the web.
 - `@{bot_name} !image [prompt]`: Generates an image.
 """
-    await c.reply(help_text)
+    await c.reply(help_text, text_mode="styled")

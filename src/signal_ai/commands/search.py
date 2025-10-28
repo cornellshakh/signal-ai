@@ -7,10 +7,10 @@ async def handle_search(c: Context, args: list[str], ai_client: AIClient):
     Handles the !search command.
     """
     if not args:
-        await c.reply("Usage: `!search [query]`")
+        await c.reply("Usage: `!search [query]`", text_mode="styled")
         return
 
     query = " ".join(args)
     prompt = f"Summarize the following web search query: {query}"
     response = await ai_client.generate_response(prompt)
-    await c.reply(response)
+    await c.reply(response, text_mode="styled")

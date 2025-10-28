@@ -11,6 +11,6 @@ class HelloCommand(Command):
 
     @triggered("hello")
     async def handle(self, c: Context) -> None:
-        """Sends a hello message."""
+        await c.send("Hello!", text_mode="styled")
         log.info("HelloCommand called")
-        await c.send("Hello!")
+        await c.send("Hello!", text_mode="styled")

@@ -9,7 +9,7 @@ async def handle_config(
     Handles the !config command.
     """
     if not args:
-        await c.reply("Usage: `!config [view|set] [args...]`")
+        await c.reply("Usage: `!config [view|set] [args...]`", text_mode="styled")
         return
 
     sub_command = args[0].lower()
@@ -17,29 +17,33 @@ async def handle_config(
 
     if sub_command == "view":
         mode = chat_context.config.mode
-        await c.reply(f"Current mode: `{mode}`")
+        await c.reply(f"Current mode: `{mode}`", text_mode="styled")
 
     elif sub_command == "set":
         if len(args) < 2:
-            await c.reply("Usage: `!config set mode [ai|quiet|parrot]`")
+            await c.reply("Usage: `!config set mode [ai|quiet|parrot]`", text_mode="styled")
             return
 
         key = args[1].lower()
         if key == "mode":
             if len(args) < 3:
-                await c.reply("Usage: `!config set mode [ai|quiet|parrot]`")
+                await c.reply("Usage: `!config set mode [ai|quiet|parrot]`", text_mode="styled")
                 return
 
             new_mode = args[2].lower()
             if new_mode in ["ai", "quiet", "parrot"]:
                 chat_context.config.mode = new_mode
                 persistence_manager.save_context(c.message.source)
-                await c.reply(f"Mode set to `{new_mode}`.")
+                await c.reply(f"Mode set to `{new_mode}`.", text_mode="styled")
             else:
                 await c.reply(
-                    f"Invalid mode: `{new_mode}`. Must be one of `ai`, `quiet`, or `parrot`."
+                    f"Invalid mode: `{new_mode}`. Must be one of `ai`, `quiet`, or `parrot`.",
+                    text_mode="styled",
                 )
         else:
-            await c.reply(f"Unknown config key: `{key}`.")
+            await c.reply(f"Unknown config key: `{key}`.", text_mode="styled")
     else:
-        await c.reply(f"Unknown sub-command: `{sub_command}`. Use `view` or `set`.")
+        await c.reply(
+            f"Unknown sub-command: `{sub_command}`. Use `view` or `set`.",
+            text_mode="styled",
+        )

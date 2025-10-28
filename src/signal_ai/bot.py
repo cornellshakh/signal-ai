@@ -9,7 +9,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from signalbot import SignalBot, Message
 from signalbot.api import ReceiveMessagesError
 from signalbot.bot import SignalBotError
-from signalbot.message import UnknownMessageFormatError
 
 from .core.persistence import PersistenceManager
 from .core.message_handler import MessageHandler
@@ -51,7 +50,9 @@ class SignalAIBot(SignalBot):
                     try:
                         # Try to parse the raw message as JSON for structured logging
                         parsed_message = json.loads(raw_message)
-                        log.warning("message.parse.failed", parsed_message=parsed_message)
+                        log.warning(
+                            "message.parse.failed", parsed_message=parsed_message
+                        )
                     except (json.JSONDecodeError, TypeError):
                         # Fallback for non-JSON or already-decoded messages
                         log.warning(

@@ -40,11 +40,12 @@ class ConvertCommand(Command):
                 md = MarkItDown()
                 result = md.convert(source_to_convert)
                 markdown_content = result.text_content
-                await c.send(markdown_content)
+                await c.send(markdown_content, text_mode="styled")
             except Exception as e:
                 log.exception(f"Error converting: {e}")
-                await c.send(f"Error converting: {e}")
+                await c.send(f"Error converting: {e}", text_mode="styled")
         else:
             await c.send(
-                "Please provide a file, URL, or text to convert after the !convert command."
+                "Please provide a file, URL, or text to convert after the !convert command.",
+                text_mode="styled",
             )
