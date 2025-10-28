@@ -1,6 +1,6 @@
-import logging
 import os
 import shlex
+import structlog
 from typing import TYPE_CHECKING, cast
 from signalbot import Command, Context, regex_triggered
 from ..commands.help import handle_help
@@ -12,6 +12,9 @@ from ..commands.image import handle_image
 
 if TYPE_CHECKING:
     from signal_ai.bot import SignalAIBot
+
+
+log = structlog.get_logger()
 
 
 class MessageHandler(Command):
@@ -46,15 +49,16 @@ class MessageHandler(Command):
         bot = cast("SignalAIBot", c.bot)
 
         if bot.persistence_manager is None:
-            logging.error("PersistenceManager not initialized.")
+            log.error("persistence_manager_not_initialized")
             return
 
         chat_context = bot.persistence_manager.load_context(c.message.source)
 
         # Don't respond if mode is 'quiet'
         if chat_context.config.mode == "quiet":
-            logging.info(
-                f"In quiet mode for chat {c.message.source}. Ignoring message."
+            log.info(
+                "quiet_mode_enabled",
+                chat_source=c.message.source,
             )
             return
 
@@ -88,7 +92,7 @@ class MessageHandler(Command):
             await c.stop_typing()
             await c.react("✅")
         except Exception as e:
-            logging.error(f"An error occurred while handling a message: {e}")
+            log.error("message_handling_error", error=str(e))
             await self._reply(
                 c,
                 "An unexpected error occurred. I've logged the issue for my developer to review.",
@@ -109,7 +113,7 @@ class MessageHandler(Command):
             await self._reply(c, "⚠️ Error: Mismatched quotes in your command.")
             return
 
-        logging.info(f"Handling command '{command_name}' with args: {args}")
+        log.info("handling_command", command_name=command_name, args=args)
 
         if command_name == "help":
             # Pass bot_name as an argument to handle_help
@@ -138,7 +142,7 @@ class MessageHandler(Command):
         """
         Handles a natural language query meant for the AI.
         """
-        logging.info(f"Handling as natural language: '{text}'")
+        log.info("handling_ai_query", query=text)
 
         bot = cast("SignalAIBot", c.bot)
 

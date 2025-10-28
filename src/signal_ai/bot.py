@@ -1,6 +1,6 @@
-import logging
 import os
 from asyncio import Queue
+import structlog
 from pathlib import Path
 from typing import Any, Optional
 
@@ -13,6 +13,10 @@ from signalbot.message import UnknownMessageFormatError
 from .core.persistence import PersistenceManager
 from .core.message_handler import MessageHandler
 from .core.ai_client import AIClient
+from .core.logging import configure_logging
+
+
+log = structlog.get_logger()
 
 
 class SignalAIBot(SignalBot):
@@ -35,15 +39,15 @@ class SignalAIBot(SignalBot):
         """
         Overridden to handle KeyError when parsing messages.
         """
-        self._logger.info(f"[Bot] Producer #{name} started")
+        log.info("producer_started", producer_name=name)
         try:
             async for raw_message in self._signal.receive():
-                self._logger.info(f"[Raw Message] {raw_message}")
+                log.debug("raw_message_received", raw_message=raw_message)
 
                 try:
                     message = await Message.parse(self._signal, raw_message)
                 except (UnknownMessageFormatError, KeyError):
-                    self._logger.warning(f"Ignoring message due to parsing error: {raw_message}")
+                    log.warning("message_parse_error", raw_message=raw_message)
                     continue
 
                 # Update groups if message is from an unknown group
@@ -63,24 +67,12 @@ class SignalAIBot(SignalBot):
 def main() -> None:
     """Main function to run the bot."""
     try:
-        log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
-        try:
-            log_level = getattr(logging, log_level_str)
-        except AttributeError:
-            logging.warning(f"Invalid log level: {log_level_str}, defaulting to INFO")
-            log_level = logging.INFO
-
-        # Configure logging for all modules
-        logging.basicConfig(
-            level=log_level,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-
+        configure_logging()
         signal_service = os.environ.get("SIGNAL_SERVICE")
         phone_number = os.environ.get("PHONE_NUMBER")
 
-        logging.info(f"Signal service: {signal_service}")
-        logging.info(f"Phone number: {phone_number}")
+        log.info("signal_service_configured", signal_service=signal_service)
+        log.info("phone_number_configured", phone_number=phone_number)
 
         config = {
             "signal_service": signal_service,
@@ -111,7 +103,7 @@ def main() -> None:
         bot.start()
 
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        log.error("an_error_occurred", error=str(e))
 
 
 if __name__ == "__main__":
