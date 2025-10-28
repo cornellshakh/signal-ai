@@ -1,63 +1,80 @@
-# Bot Implementation Plan
+# Implementation Plan: Centralized Prompt Management System
 
-This document outlines the technical implementation plan for the Signal AI bot. It is structured to directly correspond with the features and flows defined in `docs/bot_interaction_flow.md`.
+**Goal:** To refactor the codebase to use a centralized, configuration-based prompt management system. This will decouple prompts from the application logic, enabling easier management, iteration, and contribution by prompt engineers.
 
-## Development Approach
+---
 
-**It is critical that this plan is executed in a step-by-step, iterative manner.** Each task or feature should be implemented and thoroughly tested to ensure it is working correctly before moving on to the next. This approach minimizes complexity, makes debugging easier, and ensures a stable foundation for subsequent features. Do not proceed to a new task until the previous one is complete and verified.
+### Phase 1: Setup and Dependencies
 
-## Completed Foundational Work
+- **Objective:** Prepare the environment by adding the necessary libraries and creating the core files for the new system.
+- **Actions:**
+  1.  **Add Dependencies:** Add `PyYAML` and `Jinja2` to the project's `pyproject.toml` file to handle YAML parsing and prompt templating.
+  2.  **Create `prompts.yaml`:** Create a new file at `src/signal_ai/prompts.yaml`. This file will store all the prompts for the application.
+  3.  **Create `prompt_manager.py`:** Create a new file at `src/signal_ai/core/prompt_manager.py`. This will house the `PromptManager` class.
 
-The following core components are already in place and considered complete:
+---
 
-- **Project Scaffolding:** The `src/signal_ai/` directory structure, `pyproject.toml` dependencies, and main `bot.py` entry point are functional.
-- **Basic Bot:** The bot successfully initializes `signalbot`, connects to the Signal service, and can receive messages.
-- **Docker Integration:** The `Dockerfile` and `docker-compose.yml` are configured, and the bot can be managed via the `./scripts/` shell scripts.
+### Phase 2: Building the `PromptManager`
 
-## 1. Rebuild Core Infrastructure (From Scratch)
+- **Objective:** Implement the `PromptManager` class, which will be responsible for loading, managing, and rendering prompts.
+- **File to Create:** `src/signal_ai/core/prompt_manager.py`
+- **Implementation Details:**
+  - The class will be initialized with the path to the `prompts.yaml` file.
+  - It will use `PyYAML` to load and parse the YAML file into a Python dictionary upon initialization.
+  - It will have a `get(key, **kwargs)` method that:
+    - Retrieves the raw prompt string from the dictionary using its `key`.
+    - Uses a `jinja2.Template` to render the prompt, passing in any provided keyword arguments as template variables.
+    - Returns the final, formatted prompt string.
 
-_Goal: Implement the core components based on the new specification, removing the outdated legacy code._
+---
 
-- [x] **Implement New Persistence Layer:**
-  - Create `src/signal_ai/core/persistence.py`.
-  - Implement the `PersistenceManager` class using TinyDB with `CachingMiddleware`.
-  - Implement `load_context` and `save_context` methods.
-  - Add the hourly backup logic.
-- [x] **Implement New Context Model:**
-  - Create `src/signal_ai/core/context.py`.
-  - Define the `Context` data class using Pydantic, ensuring it includes fields for `config`, `history`, `todos`, etc., as required by the specification.
-- [x] **Implement New Message Handler:**
-  - Create `src/signal_ai/core/message_handler.py`.
-  - Implement the **Interaction Logic Gate** as the first step in the handler, checking for chat type and `mode` before any other processing.
-  - Implement the **Message Parsing and Routing** logic to direct `!` commands and conversational messages appropriately.
+### Phase 3: Populating the Prompts
 
-## 2. Implement Core Features
+- **Objective:** Move all existing hardcoded prompts into the new `prompts.yaml` file.
+- **File to Create:** `src/signal_ai/prompts.yaml`
+- **Initial Content:**
 
-_Goal: Build out the essential, non-AI user-facing features._
+  ```yaml
+  system_instruction: |
+    You are an AI assistant. Your primary goal is to provide clear, concise, and helpful answers.
 
-- [x] **Reply Strategy:**
-  - Implement the logic for mention-replies in group chats vs. standard replies in direct chats.
-- [x] **`!help` command:**
-  - Create `src/signal_ai/commands/help.py` and implement the help message.
-- [x] **`!config` command:**
-  - Create `src/signal_ai/commands/config.py` and implement the `view` and `set mode` sub-commands.
-- [x] **`!todo` command:**
-  - Create `src/signal_ai/commands/todo.py` and implement `add`, `list`, and `done`.
-- [x] **`!remind` command:**
-  - Create `src/signal_ai/commands/remind.py` and implement scheduling logic.
-- [x] **Onboarding Flow:**
-  - Implement the welcome message for when the bot joins a group.
+    **Core Rules:**
+    1. **Use Simple Language:** Your top priority is to be understood. Avoid all jargon, academic language, and overly complex phrasing. Explain things in the simplest possible terms.
+    2. **Be Thorough:** Provide comprehensive answers. You can use multiple paragraphs if it helps to structure the information clearly.
+    3. **Answer the Question Directly:** Get straight to the point. Do not ramble or provide unnecessary background information.
+    4. **Handle Greetings Simply:** If the user says hello or asks how you are, respond with a simple, direct, and friendly greeting. Do not analyze the question.
+    5. **Use Supported Formatting Only:** You can use `**bold**`, `*italic*`, `~strikethrough~`, `||spoilers||`, and `` `monospaced text` ``.
 
-## 3. AI Integration
+  generate_group_name: "Generate a short, descriptive group name (max 5 words) for the following prompt: {{ prompt }}"
+  ```
 
-_Goal: Connect the bot to the AI backend and implement AI-powered features._
+---
 
-- [x] **AI Client:**
-  - Create `src/signal_ai/core/ai_client.py` to handle all interactions with the Gemini API.
-- [x] **AI-Powered Commands:**
-  - Create `src/signal_ai/commands/search.py` for web search/URL summary.
-  - Create `src/signal_ai/commands/image.py` for image generation.
-- [x] **User Feedback System:**
-  - Implement the three-stage feedback system (typing, `⏳`, `✅`/`❌`).
-- [x] **Summarization Service:**
-  - Implement the "Intelligent Summarizer" background task.
+### Phase 4: Integration into the Application
+
+- **Objective:** Refactor the existing codebase to use the new `PromptManager` instead of hardcoded strings.
+- **Files to Modify:**
+  - `src/signal_ai/bot.py`
+  - `src/signal_ai/core/ai_client.py`
+  - `src/signal_ai/commands/context/new.py`
+- **Implementation Steps:**
+  1.  **In `bot.py`:**
+      - Import `PromptManager`.
+      - Initialize an instance of `PromptManager` in the `SignalAIBot`'s `__init__` method and store it as `self.prompt_manager`.
+  2.  **In `ai_client.py`:**
+      - Modify the `AIClient`'s `__init__` method to accept the `prompt_manager` instance.
+      - Replace the hardcoded `system_instruction` string with a call to `prompt_manager.get("system_instruction")`.
+  3.  **In `new.py`:**
+      - Access the bot's `prompt_manager` instance.
+      - Replace the hardcoded group name generation prompt with a call to `bot.prompt_manager.get("generate_group_name", prompt=prompt)`.
+
+---
+
+### Phase 5: Testing
+
+- **Objective:** Ensure the refactored system works correctly and that prompts are being loaded and rendered as expected.
+- **Test Plan:**
+  - Run the `!new <prompt>` command to verify the end-to-end flow.
+  - Check that the group is created with a correctly generated name.
+  - Confirm that the initial AI response is generated correctly, using the new system prompt.
+  - Temporarily modify a prompt in `prompts.yaml` and restart the bot to ensure changes are loaded without requiring a code change.

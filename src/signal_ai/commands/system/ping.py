@@ -1,10 +1,16 @@
-from signalbot import Command, Context, triggered
+from typing import List
+from signalbot import Context
+from ...core.command import BaseCommand
 
 
-class PingCommand(Command):
-    def describe(self) -> str:
+class PingCommand(BaseCommand):
+    @property
+    def name(self) -> str:
+        return "ping"
+
+    @property
+    def description(self) -> str:
         return "A simple command to check if the bot is responsive."
 
-    @triggered("!system ping")
-    async def handle(self, c: Context) -> None:
+    async def handle(self, c: Context, args: List[str]) -> None:
         await c.send("pong", text_mode="styled")

@@ -33,7 +33,10 @@ dependencies = [
     "structlog",
     "google-generativeai",
     "tenacity",
-    "cachetools"
+    "cachetools",
+    "redis",
+    "pyyaml",
+    "jinja2"
 ]
 
 [tool.poetry]

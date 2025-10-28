@@ -5,13 +5,13 @@ import shlex
 import time
 import structlog
 from typing import TYPE_CHECKING, cast, Optional
-from signalbot import Command, Context, Message, regex_triggered
+from signalbot import Context, Message, SendMessageError
 
 if TYPE_CHECKING:
-    from signal_ai.bot import SignalAIBot
+    from ..bot import SignalAIBot
 
 
-HISTORY_WINDOW_SIZE = 4
+HISTORY_WINDOW_SIZE = 50
 log = structlog.get_logger()
 
 
@@ -36,20 +36,26 @@ def cleanup_signal_formatting(text: str) -> str:
     text = re.sub(r"(\n\d+\..*\n)\n", r"\1", text)
     text = re.sub(r"(\n\*[^*]+\*.*\n)\n", r"\1", text)
 
+    # Trim dangling markdown formatting characters from the start and end of the text
+    formatting_chars = r"\*|_|~|`|\|"
+    text = re.sub(rf"^({formatting_chars})+", "", text)
+    text = re.sub(rf"({formatting_chars})+$", "", text)
 
     return text
 
 
-class MessageHandler(Command):
+from .dispatcher import CommandDispatcher
+
+
+class MessageHandler:
     """
     Centralized handler for all incoming messages.
     This class implements the Interaction Logic Gate and routes messages.
     """
 
-    def describe(self) -> str:
-        return "Handles all incoming messages and routes them appropriately."
+    def __init__(self, dispatcher: CommandDispatcher):
+        self.dispatcher = dispatcher
 
-    @regex_triggered(r".*")
     async def handle(self, c: Context):
         """
         The main entry point for processing messages.
@@ -84,17 +90,19 @@ class MessageHandler(Command):
             return
 
         # Interaction Logic Gate
-        if is_group_chat and not text.startswith(f"@{bot_name}"):
-            # In group chats, only respond to mentions
-            return
-
         bot = cast("SignalAIBot", c.bot)
-
         if bot.persistence_manager is None:
             log.error("persistence_manager.not_initialized")
             return
-
+        
         chat_context = bot.persistence_manager.load_context(c.message.source)
+
+        if is_group_chat and not chat_context.is_initialized:
+            chat_context.config.mode = "mention"
+            chat_context.is_initialized = True
+
+        if is_group_chat and chat_context.config.mode == "mention" and not text.startswith(f"@{bot_name}"):
+            return
 
         # Don't respond if mode is 'quiet'
         if chat_context.config.mode == "quiet":
@@ -121,7 +129,9 @@ class MessageHandler(Command):
                 await c.react("⚛️")
                 return
 
-            if not text_after_mention.startswith("!"):
+            if text_after_mention.startswith("!"):
+                await self.dispatcher.dispatch(c, text_after_mention)
+            else:
                 # This is a conversational message for the AI
                 await self._handle_ai_query_stream(c, text_after_mention)
 
@@ -161,40 +171,58 @@ class MessageHandler(Command):
         UPDATE_INTERVAL = 0.5  # seconds
 
         try:
+            thinking_message_timestamp = await c.reply("Thinking...")
             stream = bot.ai_client.generate_response_stream(
-                chat_id=c.message.source,
-                prompt=text,
-                history=ai_history,
+                chat_id=c.message.source, prompt=text, history=ai_history
             )
 
             async for chunk in stream:
                 full_response += chunk
                 current_time = time.time()
+                cleaned_response = cleanup_signal_formatting(full_response)
 
-                if sent_message_timestamp is None:
-                    # Send the first chunk as a new message and get its timestamp
-                    # Send the first chunk as a new message and get its timestamp
-                    sent_message_timestamp = await c.reply(
-                        cleanup_signal_formatting(full_response) or "...",
-                        text_mode="styled",
-                    )
-                    last_update_time = current_time
-                elif current_time - last_update_time > UPDATE_INTERVAL:
-                    # Edit the message with the updated content
-                    await c.edit(
-                        cleanup_signal_formatting(full_response),
-                        edit_timestamp=sent_message_timestamp,
-                    )
-                    last_update_time = current_time
+                if not cleaned_response or not cleaned_response.strip():
+                    continue
 
-            # Ensure the final message is sent
+                try:
+                    if sent_message_timestamp is None:
+                        await c.edit(
+                            cleaned_response,
+                            edit_timestamp=thinking_message_timestamp,
+                            text_mode="styled",
+                        )
+                        sent_message_timestamp = thinking_message_timestamp
+                        last_update_time = current_time
+                    elif current_time - last_update_time > UPDATE_INTERVAL:
+                        await c.edit(
+                            cleaned_response,
+                            edit_timestamp=sent_message_timestamp,
+                            text_mode="styled",
+                        )
+                        last_update_time = current_time
+                except SendMessageError:
+                    log.warning(
+                        "ai_query_stream.send.failed",
+                        text=cleaned_response,
+                        exc_info=True,
+                    )
+
             if sent_message_timestamp:
-                await c.edit(
-                    cleanup_signal_formatting(full_response),
-                    edit_timestamp=sent_message_timestamp,
-                )
+                final_cleaned_response = cleanup_signal_formatting(full_response)
+                if final_cleaned_response and final_cleaned_response.strip():
+                    try:
+                        await c.edit(
+                            final_cleaned_response,
+                            edit_timestamp=sent_message_timestamp,
+                            text_mode="styled",
+                        )
+                    except SendMessageError:
+                        log.error(
+                            "ai_query_stream.final_send.failed",
+                            text=final_cleaned_response,
+                            exc_info=True,
+                        )
 
-            # Update history with the complete response
             chat_context.history.append({"role": "user", "parts": [text]})
             chat_context.history.append({"role": "model", "parts": [full_response]})
             bot.persistence_manager.save_context(c.message.source)

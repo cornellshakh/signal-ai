@@ -1,29 +1,43 @@
-from typing import Optional
+from typing import List, cast
 from datetime import datetime, timedelta
-from signalbot import Command, Context, regex_triggered
-from apscheduler.schedulers.background import BackgroundScheduler
+from signalbot import Context
+from ...bot import SignalAIBot
+from ...core.command import BaseCommand
 
 
-class RemindCommand(Command):
-    def __init__(self, scheduler: BackgroundScheduler):
-        self._scheduler = scheduler
+class RemindCommand(BaseCommand):
+    @property
+    def name(self) -> str:
+        return "remind"
 
-    def describe(self) -> str:
+    @property
+    def description(self) -> str:
         return "Sets a reminder."
 
     def help(self) -> str:
         return (
-            "Usage: `!task remind (in|at) <time> <message>`\n\n"
+            "Usage: `!remind (in|at) <time> <message>`\n\n"
             "Sets a reminder.\n\n"
             "**Subcommands:**\n"
             "- `in <time> <message>`: Set a reminder in a relative amount of time (e.g., `10s`, `5m`, `1h`).\n"
             "- `at <time> <message>`: Set a reminder at a specific time (e.g., `14:30`)."
         )
 
-    @regex_triggered(r"^!task remind (in|at) (.+?) (.+)")
-    async def handle(
-        self, c: Context, when_type: str, time_str: str, message: str
-    ) -> None:
+    async def handle(self, c: Context, args: List[str]) -> None:
+        bot = cast("SignalAIBot", c.bot)
+        scheduler = bot.scheduler
+        if not scheduler:
+            await c.reply("Scheduler not available.")
+            return
+
+        if len(args) < 3:
+            await c.reply("Usage: `!remind (in|at) <time> <message>`", text_mode="styled")
+            return
+
+        when_type = args[0]
+        time_str = args[1]
+        message = " ".join(args[2:])
+
         if when_type == "in":
             try:
                 # Simple parsing for "in" reminders, e.g., "10s", "5m", "1h"
@@ -39,7 +53,7 @@ class RemindCommand(Command):
                     raise ValueError("Invalid time unit")
 
                 run_date = datetime.now() + delta
-                self._scheduler.add_job(
+                scheduler.add_job(
                     c.reply,
                     "date",
                     run_date=run_date,
@@ -69,7 +83,7 @@ class RemindCommand(Command):
                         days=1
                     )  # if time is in the past, schedule for tomorrow
 
-                self._scheduler.add_job(
+                scheduler.add_job(
                     c.reply,
                     "date",
                     run_date=run_date,
@@ -86,3 +100,5 @@ class RemindCommand(Command):
                     "Invalid time format for 'at'. Use HH:MM.", text_mode="styled"
                 )
                 return
+        else:
+            await c.reply(f"Unknown subcommand: `{when_type}`.", text_mode="styled")

@@ -16,11 +16,19 @@ services:
       timeout: 5s
       retries: 3
 
+  redis:
+    image: "redis:alpine"
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
   bot:
     build: .
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     volumes:
@@ -28,3 +36,6 @@ services:
       - ./signal-cli-config:/home/.local/share/signal-cli
       - ./signal-ai-data:/root/.signal-ai
     restart: unless-stopped
+
+volumes:
+  redis-data:

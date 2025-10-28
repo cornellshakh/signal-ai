@@ -1,32 +1,40 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, cast
 
 from markitdown import MarkItDown
-from signalbot import Command, Context, regex_triggered
+from signalbot import Context
+from ...bot import SignalAIBot
+from ...core.command import BaseCommand
 
 log = logging.getLogger(__name__)
 
 
-class ConvertCommand(Command):
+class ConvertCommand(BaseCommand):
     """
     A command to convert an attached file or message text to Markdown using MarkItDown.
     To use this command, send the bot a message with a file attached or text to convert.
     """
 
-    def describe(self) -> str:
+    @property
+    def name(self) -> str:
+        return "convert"
+
+    @property
+    def description(self) -> str:
         return "Converts a file, URL, or text to Markdown."
 
     def help(self) -> str:
         return (
-            "Usage: `!utility convert [file|URL|text]`\n\n"
+            "Usage: `!convert [file|URL|text]`\n\n"
             "Converts a file, URL, or text to Markdown."
         )
 
-    @regex_triggered(r"^!utility convert(?: (.+))?$")
-    async def handle(self, c: Context, source_to_convert: Optional[str] = None) -> None:
+    async def handle(self, c: Context, args: List[str]) -> None:
         """Convert the attached file or message text to Markdown"""
         log.info("ConvertCommand called")
+
+        source_to_convert = " ".join(args) if args else None
 
         if not source_to_convert and c.message.attachments_local_filenames:
             attachment_filename = c.message.attachments_local_filenames[0]
@@ -39,7 +47,7 @@ class ConvertCommand(Command):
         if source_to_convert:
             try:
                 md = MarkItDown()
-                result = md.convert(source_to_convert)
+                result = md.convert(str(source_to_convert))
                 markdown_content = result.text_content
                 await c.send(markdown_content, text_mode="styled")
             except Exception as e:

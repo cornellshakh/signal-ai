@@ -6,24 +6,18 @@ from pathlib import Path
 from typing import Any, Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from signalbot import SignalBot, Message
+from signalbot import SignalBot, Message, Context
 from signalbot.api import ReceiveMessagesError
 from signalbot.bot import SignalBotError
 
 from .core.persistence import PersistenceManager
 from .core.message_handler import MessageHandler
-from .commands.system.help import HelpCommand
-from .commands.system.ping import PingCommand
-from .commands.config.config import ConfigCommand
-from .commands.context.context import ContextCommand
-from .commands.memory.remember import MemoryCommand
-from .commands.task.todo import TaskCommand
-from .commands.task.remind import RemindCommand
-from .commands.ai.image import ImageCommand
-from .commands.ai.search import SearchCommand
-from .commands.utility.convert import ConvertCommand
 from .core.ai_client import AIClient
 from .core.logging import configure_logging
+from .core.dispatcher import CommandDispatcher
+from .core.group_manager import GroupManager
+from .core.prompt_manager import PromptManager
+from . import commands
 
 
 log = structlog.get_logger()
@@ -44,6 +38,10 @@ class SignalAIBot(SignalBot):
         self.persistence_manager: Optional[PersistenceManager] = None
         self.scheduler: Optional[BackgroundScheduler] = None
         self.ai_client: Optional[AIClient] = None
+        self.dispatcher: Optional[CommandDispatcher] = None
+        self.message_handler: Optional[MessageHandler] = None
+        self.group_manager: Optional[GroupManager] = None
+        self.prompt_manager: Optional[PromptManager] = None
 
     async def _produce(self, name: int) -> None:
         """
@@ -71,6 +69,15 @@ class SignalAIBot(SignalBot):
                     # Handle sync messages intelligently to distinguish echoes from new messages
                     if "syncMessage" in envelope:
                         sync_message_data = envelope.get("syncMessage", {})
+
+                        if "readMessages" in sync_message_data:
+                            log.info(
+                                "message.filtered",
+                                reason="Read receipt sync message",
+                                filtered_message=parsed_message,
+                            )
+                            continue
+
                         if "sentMessage" in sync_message_data:
                             sent_message = sync_message_data.get("sentMessage", {})
                             destination = sent_message.get("destination")
@@ -123,7 +130,9 @@ class SignalAIBot(SignalBot):
                 ):
                     await self._detect_groups()
 
-                await self._ask_commands_to_handle(message)
+                if self.message_handler:
+                    context = Context(self, message)
+                    await self.message_handler.handle(context)
 
         except ReceiveMessagesError as e:
             raise SignalBotError(f"Cannot receive messages: {e}") from e
@@ -162,26 +171,18 @@ def main() -> None:
         db_path = Path.home() / ".signal-ai" / "db.json"
         bot.persistence_manager = PersistenceManager(db_path)
 
+        # Initialize and attach PromptManager
+        bot.prompt_manager = PromptManager()
+
         # Initialize and attach AIClient
         api_key = os.environ.get("GEMINI_API_KEY")
-        if api_key:
-            bot.ai_client = AIClient(api_key)
+        if api_key and bot.prompt_manager:
+            bot.ai_client = AIClient(api_key, prompt_manager=bot.prompt_manager)
 
-        # Register command handlers
-        bot.register(MessageHandler())
-        bot.register(HelpCommand(bot))
-        bot.register(PingCommand())
-        if bot.persistence_manager:
-            bot.register(ConfigCommand(bot.persistence_manager))
-            bot.register(ContextCommand(bot.persistence_manager))
-            bot.register(MemoryCommand(bot.persistence_manager))
-            bot.register(TaskCommand(bot.persistence_manager))
-        if bot.scheduler:
-            bot.register(RemindCommand(bot.scheduler))
-        if bot.ai_client:
-            bot.register(ImageCommand(bot.ai_client))
-            bot.register(SearchCommand(bot.ai_client))
-        bot.register(ConvertCommand())
+        # Initialize and attach CommandDispatcher and MessageHandler
+        bot.dispatcher = CommandDispatcher(commands)
+        bot.message_handler = MessageHandler(bot.dispatcher)
+        bot.group_manager = GroupManager(bot)
 
         # Initialize and attach scheduler
         scheduler = BackgroundScheduler()

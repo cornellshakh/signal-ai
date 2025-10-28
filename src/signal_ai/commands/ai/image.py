@@ -1,26 +1,39 @@
-from typing import Optional
-from signalbot import Command, Context, regex_triggered
-from ...core.ai_client import AIClient
+from typing import List, cast
+from signalbot import Context
+from ...bot import SignalAIBot
+from ...core.command import BaseCommand
 
 
-class ImageCommand(Command):
-    def __init__(self, ai_client: AIClient):
-        self._ai_client = ai_client
+class ImageCommand(BaseCommand):
+    @property
+    def name(self) -> str:
+        return "image"
 
-    def describe(self) -> str:
+    @property
+    def description(self) -> str:
         return "Generates an image based on a prompt."
 
     def help(self) -> str:
         return (
-            "Usage: `!ai image [prompt]`\n\n"
+            "Usage: `!image [prompt]`\n\n"
             "Generates an image based on a prompt."
         )
 
-    @regex_triggered(r"^!ai image (.+)")
-    async def handle(self, c: Context, prompt: str) -> None:
+    async def handle(self, c: Context, args: List[str]) -> None:
+        bot = cast("SignalAIBot", c.bot)
+        ai_client = bot.ai_client
+        if not ai_client:
+            await c.reply("AI client not available.")
+            return
+
+        if not args:
+            await c.reply("Usage: `!image [prompt]`", text_mode="styled")
+            return
+
+        prompt = " ".join(args)
         # This is a placeholder. In a real implementation, you would generate an image
         # and send it as an attachment.
-        response = await self._ai_client.generate_response(
+        response = await ai_client.generate_response(
             chat_id=c.message.source,
             prompt=f"Create an image based on the prompt: {prompt}",
             history=[],

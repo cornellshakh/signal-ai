@@ -1,25 +1,38 @@
-from typing import Optional
-from signalbot import Command, Context, regex_triggered
-from ...core.ai_client import AIClient
+from typing import List, cast
+from signalbot import Context
+from ...bot import SignalAIBot
+from ...core.command import BaseCommand
 
 
-class SearchCommand(Command):
-    def __init__(self, ai_client: AIClient):
-        self._ai_client = ai_client
+class SearchCommand(BaseCommand):
+    @property
+    def name(self) -> str:
+        return "search"
 
-    def describe(self) -> str:
+    @property
+    def description(self) -> str:
         return "Searches the web and summarizes the results."
 
     def help(self) -> str:
         return (
-            "Usage: `!ai search [query]`\n\n"
+            "Usage: `!search [query]`\n\n"
             "Searches the web and summarizes the results."
         )
 
-    @regex_triggered(r"^!ai search (.+)")
-    async def handle(self, c: Context, query: str) -> None:
+    async def handle(self, c: Context, args: List[str]) -> None:
+        bot = cast("SignalAIBot", c.bot)
+        ai_client = bot.ai_client
+        if not ai_client:
+            await c.reply("AI client not available.")
+            return
+
+        if not args:
+            await c.reply("Usage: `!search [query]`", text_mode="styled")
+            return
+
+        query = " ".join(args)
         prompt = f"Summarize the following web search query: {query}"
-        response = await self._ai_client.generate_response(
+        response = await ai_client.generate_response(
             chat_id=c.message.source, prompt=prompt, history=[]
         )
         await c.reply(response, text_mode="styled")
