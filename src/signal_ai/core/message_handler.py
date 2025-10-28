@@ -69,11 +69,9 @@ class MessageHandler(Command):
             )
             return
 
-        await c.react("⏳")
-        await c.start_typing()
-
         # Message Parsing and Routing
         try:
+            await c.react("⏳")
             if is_group_chat:
                 text_after_mention = text[len(bot_name) + 1 :].strip()
             else:
@@ -85,7 +83,6 @@ class MessageHandler(Command):
                     c,
                     f"Hello! How can I help you? Type `@{bot_name} !help` for commands.",
                 )
-                await c.stop_typing()
                 await c.react("✅")
                 return
 
@@ -96,7 +93,6 @@ class MessageHandler(Command):
                 # This is a conversational message for the AI
                 await self._handle_ai_query(c, text_after_mention)
 
-            await c.stop_typing()
             await c.react("✅")
         except Exception as e:
             log.error("message.handle.failed", error=str(e))
@@ -104,7 +100,6 @@ class MessageHandler(Command):
                 c,
                 "An unexpected error occurred. I've logged the issue for my developer to review.",
             )
-            await c.stop_typing()
             await c.react("❌")
 
     async def _handle_command(self, c: Context, text: str):

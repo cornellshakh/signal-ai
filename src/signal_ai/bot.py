@@ -74,6 +74,18 @@ class SignalAIBot(SignalBot):
         except ReceiveMessagesError as e:
             raise SignalBotError(f"Cannot receive messages: {e}") from e
 
+    async def _produce_consume_messages(
+        self,
+        producers: int = 1,
+        consumers: int = 1,
+    ) -> None:
+        """
+        Overridden to set the number of consumers to 1.
+        """
+        return await super()._produce_consume_messages(
+            producers=producers, consumers=consumers
+        )
+
 
 def main() -> None:
     """Main function to run the bot."""
