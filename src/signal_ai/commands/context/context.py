@@ -1,7 +1,10 @@
-from typing import List, cast
-from signalbot import Context
+import asyncio
+import re
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class ContextCommand(BaseCommand):
@@ -15,50 +18,43 @@ class ContextCommand(BaseCommand):
 
     def help(self) -> str:
         return (
-            "Usage: `!context <view|clear>`\n\n"
+            "Usage: `!context <view|clear|new>`\n\n"
             "Manages the bot's short-term memory for the current conversation.\n\n"
             "**Subcommands:**\n"
             "- `view`: Show the current chat history.\n"
-            "- `clear`: Clear the current chat history."
+            "- `clear`: Clear the current chat history.\n"
+            "- `new <prompt>`: Create a new conversation group with a prompt."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        persistence_manager = bot.persistence_manager
-        ai_client = bot.ai_client
-
-        if not persistence_manager:
-            await c.reply("Persistence manager not available.")
-            return
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.persistence_manager or not bot.ai_client or not bot.prompt_manager:
+            return ErrorResult("Persistence, AI, or prompt manager not available.")
 
         if not args:
-            await c.reply(
-                "Usage: `!context <view|clear>`\n\n"
-                "**Sub-commands:**\n"
-                "- `view`: Show the current chat history.\n"
-                "- `clear`: Clear the current chat history.",
-                text_mode="styled",
-            )
-            return
+            sub_command = "view"
+            text = None
+        else:
+            sub_command = args[0]
+            text = " ".join(args[1:]) if len(args) > 1 else None
 
-        sub_command = args[0]
-        chat_context = persistence_manager.load_context(c.message.source)
+        chat_context = await bot.persistence_manager.load_context(c.chat_id)
 
         if sub_command == "view":
             history = chat_context.history
             if not history:
-                await c.reply("Chat history is empty.", text_mode="styled")
-                return
+                return TextResult("Chat history is empty.")
 
-            # Default to the last 10 messages
-            try:
-                num_messages = int(args[1]) if len(args) > 1 else 10
-            except ValueError:
-                num_messages = 10
+            num_messages = 10
+            if text:
+                try:
+                    num_messages = int(text)
+                except ValueError:
+                    pass
 
-            # Get the requested number of messages, or all if there are fewer
             start_index = max(0, len(history) - num_messages)
-
             formatted_history = []
             for i, item in enumerate(history[start_index:], start=start_index + 1):
                 role = item.get("role", "unknown").capitalize()
@@ -67,32 +63,65 @@ class ContextCommand(BaseCommand):
                 formatted_history.append(f"_{i}_. *{role}*:\n{content}")
 
             full_history = "\n\n".join(formatted_history)
-
-            # Split the message into chunks of 4000 characters
             max_len = 4000
             chunks = [
                 full_history[i : i + max_len]
                 for i in range(0, len(full_history), max_len)
             ]
 
-            import asyncio
-
             for chunk in chunks:
-                await c.reply(chunk, text_mode="styled")
+                await c.raw_context.reply(chunk, text_mode="styled")
                 await asyncio.sleep(1)
+            return None
 
         elif sub_command == "clear":
-            # Clear the history in the database
             chat_context.history = []
-            persistence_manager.save_context(c.message.source)
+            await bot.persistence_manager.save_context(c.chat_id)
+            bot.ai_client.clear_chat_session(c.chat_id)
+            return TextResult("Chat history and AI session cache have been cleared.")
 
-            # Clear the chat session from the AI client's cache
-            if ai_client:
-                ai_client.clear_chat_session(c.message.source)
+        elif sub_command == "new":
+            if not text:
+                return ErrorResult("Usage: `!context new <prompt>`")
 
-            await c.reply(
-                "Chat history and AI session cache have been cleared.",
-                text_mode="styled",
-            )
+            try:
+                group_name_prompt = bot.prompt_manager.get(
+                    "generate_group_name", prompt=text
+                )
+                group_name = await bot.ai_client.generate_response(
+                    chat_id=c.chat_id, prompt=group_name_prompt, history=[]
+                )
+                group_name = re.sub(r"[*_~`[\]()]", "", group_name.strip().strip('"'))
+
+                user_uuid = c.raw_context.message.source_uuid
+                if not user_uuid:
+                    return ErrorResult("Could not identify your user UUID.")
+
+                if not bot.group_manager:
+                    return ErrorResult("Group manager is not configured.")
+
+                group_info = await bot.group_manager.create(group_name, [user_uuid])
+                group_id = group_info.get("id")
+                if not group_id:
+                    return ErrorResult("Could not retrieve the group ID.")
+
+                await bot._detect_groups()
+
+                group_context = await bot.persistence_manager.load_context(group_id)
+                group_context.config.mode = "ai"
+                await bot.persistence_manager.save_context(group_id)
+
+                ai_response = await bot.ai_client.generate_response(
+                    chat_id=group_id, prompt=text, history=[]
+                )
+                await bot.send(group_id, ai_response, text_mode="styled")
+
+                return TextResult(
+                    f"I've created the group '**{group_name}**' and added you to it."
+                )
+
+            except Exception as e:
+                return ErrorResult(f"An error occurred: {e}")
+
         else:
-            await c.reply(f"Unknown subcommand: `{sub_command}`.", text_mode="styled")
+            return ErrorResult(f"Unknown subcommand: `{sub_command}`.")

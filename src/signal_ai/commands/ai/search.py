@@ -1,7 +1,8 @@
-from typing import List, cast
-from signalbot import Context
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class SearchCommand(BaseCommand):
@@ -19,20 +20,19 @@ class SearchCommand(BaseCommand):
             "Searches the web and summarizes the results."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        ai_client = bot.ai_client
-        if not ai_client:
-            await c.reply("AI client not available.")
-            return
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.ai_client:
+            return ErrorResult("AI client not available.")
 
         if not args:
-            await c.reply("Usage: `!search [query]`", text_mode="styled")
-            return
+            return ErrorResult("Usage: `!search [query]`")
 
         query = " ".join(args)
         prompt = f"Summarize the following web search query: {query}"
-        response = await ai_client.generate_response(
-            chat_id=c.message.source, prompt=prompt, history=[]
+        response = await bot.ai_client.generate_response(
+            chat_id=c.chat_id, prompt=prompt, history=[]
         )
-        await c.reply(response, text_mode="styled")
+        return TextResult(response)

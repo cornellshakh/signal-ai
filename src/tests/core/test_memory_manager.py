@@ -1,63 +1,64 @@
-import unittest
-from unittest.mock import MagicMock
+import pytest
+from unittest.mock import MagicMock, AsyncMock
 
-from src.signal_ai.core.memory_manager import MemoryManager, ShortTermMemoryBackend
-from src.signal_ai.core.context import Context
-from src.signal_ai.core.persistence import PersistenceManager
+from signal_ai.core.memory_manager import MemoryManager, ShortTermMemoryBackend
+from signal_ai.core.context import Context
+from signal_ai.core.persistence import PersistenceManager
 
 
-class TestMemoryManager(unittest.TestCase):
-    def setUp(self):
-        """Set up a mock backend for the MemoryManager."""
-        self.mock_backend = MagicMock()
-        self.memory_manager = MemoryManager(backend=self.mock_backend)
-
+class TestMemoryManager:
     def test_add_memory_calls_backend(self):
         """Test that add_memory calls the backend's add_memory."""
+        mock_backend = MagicMock()
+        memory_manager = MemoryManager(backend=mock_backend)
         chat_id = "test_chat"
         memory_text = "this is a test memory"
-        self.memory_manager.add_memory(chat_id, memory_text)
-        self.mock_backend.add_memory.assert_called_once_with(chat_id, memory_text)
+        memory_manager.add_memory(chat_id, memory_text)
+        mock_backend.add_memory.assert_called_once_with(chat_id, memory_text)
 
     def test_retrieve_relevant_memories_calls_backend(self):
         """Test that retrieve_relevant_memories calls the backend's method."""
+        mock_backend = MagicMock()
+        memory_manager = MemoryManager(backend=mock_backend)
         chat_id = "test_chat"
         query_text = "test query"
-        self.memory_manager.retrieve_relevant_memories(chat_id, query_text, k=3)
-        self.mock_backend.retrieve_relevant_memories.assert_called_once_with(
+        memory_manager.retrieve_relevant_memories(chat_id, query_text, k=3)
+        mock_backend.retrieve_relevant_memories.assert_called_once_with(
             chat_id, query_text, 3
         )
 
 
-class TestShortTermMemoryBackend(unittest.TestCase):
-    def setUp(self):
-        """Set up a mock PersistenceManager."""
-        self.mock_persistence_manager = MagicMock(spec=PersistenceManager)
-        self.backend = ShortTermMemoryBackend(
-            persistence_manager=self.mock_persistence_manager
-        )
+@pytest.mark.asyncio
+class TestShortTermMemoryBackend:
+    @pytest.fixture
+    def mock_persistence_manager(self):
+        return AsyncMock(spec=PersistenceManager)
 
-    def test_add_memory(self):
+    @pytest.fixture
+    def backend(self, mock_persistence_manager):
+        return ShortTermMemoryBackend(persistence_manager=mock_persistence_manager)
+
+    async def test_add_memory(self, backend, mock_persistence_manager):
         """Test that add_memory correctly appends to the chat history."""
         chat_id = "test_chat"
         memory_text = "new memory"
 
         # Mock the context object that the persistence manager would load
         mock_context = Context()
-        self.mock_persistence_manager.load_context.return_value = mock_context
+        mock_persistence_manager.load_context.return_value = mock_context
 
-        self.backend.add_memory(chat_id, memory_text)
+        await backend.add_memory(chat_id, memory_text)
 
         # Verify that the memory was added in the correct format
-        self.assertEqual(len(mock_context.history), 1)
-        self.assertEqual(
-            mock_context.history[0], {"role": "user", "parts": [memory_text]}
-        )
+        assert len(mock_context.history) == 1
+        assert mock_context.history[0] == {"role": "user", "parts": [memory_text]}
 
         # Verify that the context was saved
-        self.mock_persistence_manager.save_context.assert_called_once_with(chat_id)
+        mock_persistence_manager.save_context.assert_called_once_with(chat_id)
 
-    def test_retrieve_relevant_memories_keyword_search(self):
+    async def test_retrieve_relevant_memories_keyword_search(
+        self, backend, mock_persistence_manager
+    ):
         """Test the keyword-based retrieval logic."""
         chat_id = "test_chat"
         query = "find relevant info"
@@ -71,16 +72,12 @@ class TestShortTermMemoryBackend(unittest.TestCase):
 
         mock_context = Context()
         mock_context.history = history
-        self.mock_persistence_manager.load_context.return_value = mock_context
+        mock_persistence_manager.load_context.return_value = mock_context
 
-        results = self.backend.retrieve_relevant_memories(chat_id, query, k=5)
+        results = await backend.retrieve_relevant_memories(chat_id, query, k=5)
 
-        self.assertEqual(len(results), 2)
-        self.assertIn("this is very relevant", results)
-        self.assertIn("another piece of relevant info", results)
+        assert len(results) == 2
+        assert "this is very relevant" in results
+        assert "another piece of relevant info" in results
         # Check that the most relevant (higher score) is first
-        self.assertEqual(results[0], "another piece of relevant info")
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert results[0] == "another piece of relevant info"

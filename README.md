@@ -100,10 +100,40 @@ For developers who prefer to work without Docker, a local setup script is provid
 
     Activate the virtual environment and run the bot directly:
 
-    ```bash
+    ````bash
     source .venv/bin/activate
     python -m src.signal_ai.bot
-    ```
+        ```
+
+    ### 4. Configure Your IDE
+
+    To ensure that your IDE's linter and autocompletion work correctly, you need to point it to the project's virtual environment.
+
+    -   **VS Code:** Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`), search for `Python: Select Interpreter`, and choose the interpreter from the `.venv` directory (e.g., `.venv/bin/python`).
+
+    ---
+
+    ## Testing
+
+    The project uses `pytest` for testing. To run the test suite:
+
+    1.  **Install Development Dependencies**:
+
+        If you haven't already, install the main and development dependencies using the setup script:
+
+        ```bash
+        ./scripts/setup.sh
+        ```
+
+    2.  **Run Tests**:
+
+        Activate the virtual environment and run `pytest`:
+
+        ```bash
+        poetry shell
+        pytest
+        ```
+    ````
 
 ## Contributing
 
@@ -123,4 +153,3 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 ## Documentation
 
 - [Development Philosophy](docs/development_philosophy.md)
-- [Bot Interaction Flow](docs/bot_interaction_flow.md)

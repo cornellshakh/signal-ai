@@ -1,7 +1,8 @@
-from typing import List, cast
-from signalbot import Context
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class ImageCommand(BaseCommand):
@@ -16,23 +17,22 @@ class ImageCommand(BaseCommand):
     def help(self) -> str:
         return "Usage: `!image [prompt]`\n\n" "Generates an image based on a prompt."
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        ai_client = bot.ai_client
-        if not ai_client:
-            await c.reply("AI client not available.")
-            return
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.ai_client:
+            return ErrorResult("AI client not available.")
 
         if not args:
-            await c.reply("Usage: `!image [prompt]`", text_mode="styled")
-            return
+            return ErrorResult("Usage: `!image [prompt]`")
 
         prompt = " ".join(args)
         # This is a placeholder. In a real implementation, you would generate an image
-        # and send it as an attachment.
-        response = await ai_client.generate_response(
-            chat_id=c.message.source,
+        # and return an ImageResult.
+        response = await bot.ai_client.generate_response(
+            chat_id=c.chat_id,
             prompt=f"Create an image based on the prompt: {prompt}",
             history=[],
         )
-        await c.reply(response, text_mode="styled")
+        return TextResult(response)

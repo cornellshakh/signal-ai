@@ -5,18 +5,19 @@ WORKDIR /app
 # Install Poetry
 RUN pip install poetry
 
+# Set the Poetry cache directory
+ENV POETRY_CACHE_DIR=/app/.cache
+
 # Copy only the dependency files first
 COPY pyproject.toml poetry.lock* ./
+COPY ./vendor /app/vendor
 
 # Install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+    && poetry install --no-interaction --no-ansi --only main --no-root
 
 
 # Copy the rest of the application code
 COPY ./src /app/src
-
-# Create the data directory and the database file
-RUN mkdir -p /app/data && touch /app/data/signal_ai.db
 
 CMD ["python", "-m", "src.signal_ai.bot"]

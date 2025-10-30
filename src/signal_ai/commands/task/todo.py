@@ -1,13 +1,14 @@
-from typing import cast, Dict, Any, Optional
-from signalbot import Context
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
-class TaskCommand(BaseCommand):
+class TodoCommand(BaseCommand):
     @property
     def name(self) -> str:
-        return "task"
+        return "todo"
 
     @property
     def description(self) -> str:
@@ -15,7 +16,7 @@ class TaskCommand(BaseCommand):
 
     def help(self) -> str:
         return (
-            "Usage: `!task [add|list|done|clear|remove] [args...]`\n\n"
+            "Usage: `!todo [add|list|done|clear|remove] [args...]`\n\n"
             "Manages the to-do list for this chat.\n\n"
             "**Subcommands:**\n"
             "- `add [item]`: Add an item to the to-do list.\n"
@@ -25,71 +26,57 @@ class TaskCommand(BaseCommand):
             "- `remove [index]`: Remove an item by its index."
         )
 
-    @property
-    def ArgsSchema(self) -> Optional[Dict[str, Any]]:
-        return {
-            "type": "object",
-            "properties": {
-                "sub_command": {
-                    "type": "string",
-                    "description": "The subcommand to execute (add, list, done, clear, or remove).",
-                },
-                "text": {
-                    "type": "string",
-                    "description": "The text of the to-do item or the index to mark as done.",
-                },
-            },
-        }
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.persistence_manager:
+            return ErrorResult("Persistence manager not available.")
 
-    async def handle(self, c: Context, args: Dict[str, Any]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        persistence_manager = bot.persistence_manager
-        if not persistence_manager:
-            await c.reply("Persistence manager not available.")
-            return
+        if not args:
+            sub_command = "list"
+            text = None
+        else:
+            sub_command = args[0]
+            text = " ".join(args[1:]) if len(args) > 1 else None
 
-        sub_command = args.get("sub_command")
-        text = args.get("text")
-        chat_context = persistence_manager.load_context(c.message.source)
+        chat_context = await bot.persistence_manager.load_context(c.chat_id)
 
         if sub_command == "add":
             if not text:
-                await c.reply("Usage: `!task add [item]`", text_mode="styled")
-                return
+                return ErrorResult("Usage: `!todo add [item]`")
             chat_context.todos.append(text)
-            persistence_manager.save_context(c.message.source)
-            await c.reply(f"Added to-do: `{text}`", text_mode="styled")
+            await bot.persistence_manager.save_context(c.chat_id)
+            return TextResult(f"Added to-do: `{text}`")
 
         elif sub_command == "list":
             if not chat_context.todos:
-                await c.reply("No to-do items.", text_mode="styled")
-                return
+                return TextResult("No to-do items.")
 
             todo_list = ""
             for i, item in enumerate(chat_context.todos):
                 todo_list += f"{i+1}. {item}\n"
-            await c.reply(todo_list, text_mode="styled")
+            return TextResult(todo_list)
 
         elif sub_command == "done" or sub_command == "remove":
             if not text:
-                await c.reply(f"Usage: `!task {sub_command} [index]`", text_mode="styled")
-                return
+                return ErrorResult(f"Usage: `!todo {sub_command} [index]`")
             try:
                 index = int(text) - 1
                 if 0 <= index < len(chat_context.todos):
                     item = chat_context.todos.pop(index)
-                    persistence_manager.save_context(c.message.source)
+                    await bot.persistence_manager.save_context(c.chat_id)
                     if sub_command == "done":
-                        await c.reply(f"Completed to-do: `{item}`", text_mode="styled")
+                        return TextResult(f"Completed to-do: `{item}`")
                     else:
-                        await c.reply(f"Removed to-do: `{item}`", text_mode="styled")
+                        return TextResult(f"Removed to-do: `{item}`")
                 else:
-                    await c.reply("Invalid to-do index.", text_mode="styled")
+                    return ErrorResult("Invalid to-do index.")
             except ValueError:
-                await c.reply("Invalid to-do index.", text_mode="styled")
+                return ErrorResult("Invalid to-do index.")
         elif sub_command == "clear":
             chat_context.todos.clear()
-            persistence_manager.save_context(c.message.source)
-            await c.reply("To-do list cleared.", text_mode="styled")
+            await bot.persistence_manager.save_context(c.chat_id)
+            return TextResult("To-do list cleared.")
         else:
-            await c.reply(f"Unknown subcommand: `{sub_command}`.", text_mode="styled")
+            return ErrorResult(f"Unknown subcommand: `{sub_command}`.")

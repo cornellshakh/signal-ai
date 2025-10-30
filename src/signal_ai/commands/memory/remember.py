@@ -1,34 +1,22 @@
-from typing import cast, Optional, Dict, Any
-from signalbot import Context
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
-class MemoryCommand(BaseCommand):
+class RememberCommand(BaseCommand):
     @property
     def name(self) -> str:
-        return "memory"
+        return "remember"
 
     @property
     def description(self) -> str:
         return "Manages the bot's long-term memory for this chat."
 
-    @property
-    def ArgsSchema(self) -> Optional[Dict[str, Any]]:
-        return {
-            "type": "object",
-            "properties": {
-                "sub_command": {
-                    "type": "string",
-                    "description": "The subcommand to execute (set or clear).",
-                },
-                "text": {"type": "string", "description": "The text to remember."},
-            },
-        }
-
     def help(self) -> str:
         return (
-            "Usage: `!memory [set|clear] [text]`\n\n"
+            "Usage: `!remember [set|clear] [text]`\n\n"
             "Manages the bot's long-term memory for this chat.\n"
             "This is a 'pinned message' that will be included in all future AI interactions.\n\n"
             "**Subcommands:**\n"
@@ -36,44 +24,43 @@ class MemoryCommand(BaseCommand):
             "- `clear`: Clear the pinned message."
         )
 
-    async def handle(self, c: Context, args: Dict[str, Any]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        persistence_manager = bot.persistence_manager
-        if not persistence_manager:
-            await c.reply("Persistence manager not available.")
-            return
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.persistence_manager:
+            return ErrorResult("Persistence manager not available.")
 
-        sub_command = args.get("sub_command")
-        text = args.get("text")
+        if not args:
+            sub_command = "view"
+            text = None
+        else:
+            sub_command = args[0]
+            text = " ".join(args[1:]) if len(args) > 1 else None
 
-        if not sub_command:
-            chat_context = persistence_manager.load_context(c.message.source)
+        chat_context = await bot.persistence_manager.load_context(c.chat_id)
+
+        if sub_command == "view":
             if chat_context.pinned_message:
-                await c.reply(
-                    f"**Current Pinned Message:**\n{chat_context.pinned_message}",
-                    text_mode="styled",
+                return TextResult(
+                    f"**Current Pinned Message:**\n{chat_context.pinned_message}"
                 )
             else:
-                await c.reply(
-                    "There is no pinned message. Use `!memory set [text]` to set one.",
-                    text_mode="styled",
+                return TextResult(
+                    "There is no pinned message. Use `!remember set [text]` to set one."
                 )
-            return
 
-        chat_context = persistence_manager.load_context(c.message.source)
-
-        if sub_command == "set":
+        elif sub_command == "set":
             if not text:
-                await c.reply("Usage: `!memory set [text]`", text_mode="styled")
-                return
+                return ErrorResult("Usage: `!remember set [text]`")
 
             chat_context.pinned_message = text
-            persistence_manager.save_context(c.message.source)
-            await c.reply(f"**Pinned message updated:**\n{text}", text_mode="styled")
+            await bot.persistence_manager.save_context(c.chat_id)
+            return TextResult(f"**Pinned message updated:**\n{text}")
 
         elif sub_command == "clear":
             chat_context.pinned_message = ""
-            persistence_manager.save_context(c.message.source)
-            await c.reply("Pinned message cleared.", text_mode="styled")
+            await bot.persistence_manager.save_context(c.chat_id)
+            return TextResult("Pinned message cleared.")
         else:
-            await c.reply(f"Unknown subcommand: `{sub_command}`.", text_mode="styled")
+            return ErrorResult(f"Unknown subcommand: `{sub_command}`.")

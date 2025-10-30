@@ -23,3 +23,6 @@ signal-cli-config/
 build/
 dist/
 *.egg-info/
+
+# Local development environment
+.venv/

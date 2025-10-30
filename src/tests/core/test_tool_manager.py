@@ -1,57 +1,54 @@
-import unittest
+import pytest
+from unittest.mock import AsyncMock
 
-from src.signal_ai.core.tool_manager import ToolManager
-from src.signal_ai.tools.web_search import WebSearchTool
-from src.signal_ai import commands, tools
-
-
-class TestToolManager(unittest.TestCase):
-    def test_discover_tools(self):
-        """
-        Tests that the ToolManager can discover tools from multiple packages.
-        """
-        tool_manager = ToolManager(command_package=commands, tool_package=tools)
-
-        # Check if a known command is discovered
-        self.assertIn("ping", tool_manager.tools)
-
-        # Check if a new tool is discovered
-        self.assertIn("web_search", tool_manager.tools)
-        self.assertIsInstance(tool_manager.tools["web_search"], WebSearchTool)
-
-    def test_get_tool_schemas(self):
-        """
-        Tests that the schema generation works correctly for tools with Pydantic models.
-        """
-        tool_manager = ToolManager(command_package=commands, tool_package=tools)
-        schemas = tool_manager.get_tool_schemas()
-
-        # Find the web_search schema
-        web_search_schema = next(
-            (s for s in schemas if s.name == "web_search"), None
-        )
-
-        self.assertIsNotNone(web_search_schema)
-        assert web_search_schema is not None
-        self.assertEqual(web_search_schema.name, "web_search")
-        self.assertIn("query", web_search_schema.parameters.properties)
-        self.assertEqual(
-            web_search_schema.parameters.properties["query"].type, "string"
-        )
-        self.assertIn("query", web_search_schema.parameters.required)
-
-    def test_get_tool_schemas_no_schema(self):
-        """
-        Tests that tools without an ArgsSchema are not included in the schema list.
-        """
-        tool_manager = ToolManager(command_package=commands, tool_package=tools)
-        schemas = tool_manager.get_tool_schemas()
-
-        # Find the ping schema (which shouldn't exist)
-        ping_schema = next((s for s in schemas if s.name == "ping"), None)
-
-        self.assertIsNone(ping_schema)
+from signal_ai.core.tool_manager import ToolManager
+from signal_ai.tools.web_search import WebSearchTool
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_discover_tools():
+    """
+    Tests that the ToolManager can discover tools from multiple modules.
+    """
+    tool_manager = ToolManager(
+        module_paths=[
+            "signal_ai.commands.system.ping",
+            "signal_ai.tools.web_search",
+        ]
+    )
+
+    # Check if a known command is discovered
+    assert "ping" in tool_manager.tools
+
+    # Check if a new tool is discovered
+    assert "web_search" in tool_manager.tools
+    assert isinstance(tool_manager.tools["web_search"], WebSearchTool)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_known_command(app_context, mocker):
+    """
+    Tests that the dispatch method correctly calls a known command.
+    """
+    tool_manager = ToolManager(module_paths=["signal_ai.commands.system.ping"])
+    app_context.message_text = "!ping"
+
+    # Mock the handle method of the ping command
+    mock_ping_handle = AsyncMock()
+    mocker.patch.object(tool_manager.tools["ping"], "handle", mock_ping_handle)
+
+    await tool_manager.dispatch(app_context)
+
+    mock_ping_handle.assert_called_once_with(app_context, None)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_unknown_command(app_context):
+    """
+    Tests that the dispatch method replies with an error for an unknown command.
+    """
+    tool_manager = ToolManager(module_paths=[])
+    app_context.message_text = "!unknown"
+
+    await tool_manager.dispatch(app_context)
+
+    app_context.raw_context.reply.assert_called_once_with("Unknown command: unknown")

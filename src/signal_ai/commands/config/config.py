@@ -1,7 +1,8 @@
-from typing import List, cast
-from signalbot import Context
+from typing import Any, Optional, Union, cast
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class ConfigCommand(BaseCommand):
@@ -27,32 +28,26 @@ class ConfigCommand(BaseCommand):
             "  - `quiet`: The bot will not respond to messages unless explicitly commanded."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        bot = cast("SignalAIBot", c.bot)
-        persistence_manager = bot.persistence_manager
-        if not persistence_manager:
-            await c.reply("Persistence manager not available.")
-            return
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
+        if not bot.persistence_manager:
+            return ErrorResult("Persistence manager not available.")
 
         if not args:
-            await c.reply(
-                "Usage: `!config [view|set] [key] [value]`", text_mode="styled"
-            )
-            return
+            return ErrorResult("Usage: `!config [view|set] [key] [value]`")
 
         sub_command = args[0]
-        chat_context = persistence_manager.load_context(c.message.source)
+        chat_context = await bot.persistence_manager.load_context(c.chat_id)
 
         if sub_command == "view":
             mode = chat_context.config.mode
-            await c.reply(f"Current mode: `{mode}`", text_mode="styled")
+            return TextResult(f"Current mode: `{mode}`")
 
         elif sub_command == "set":
             if len(args) < 3:
-                await c.reply(
-                    "Usage: `!config set mode [ai|mention|quiet]`", text_mode="styled"
-                )
-                return
+                return ErrorResult("Usage: `!config set mode [ai|mention|quiet]`")
 
             key = args[1]
             value = args[2]
@@ -61,14 +56,13 @@ class ConfigCommand(BaseCommand):
                 new_mode = value.lower()
                 if new_mode in ["ai", "mention", "quiet"]:
                     chat_context.config.mode = new_mode
-                    persistence_manager.save_context(c.message.source)
-                    await c.reply(f"Mode set to `{new_mode}`.", text_mode="styled")
+                    await bot.persistence_manager.save_context(c.chat_id)
+                    return TextResult(f"Mode set to `{new_mode}`.")
                 else:
-                    await c.reply(
-                        f"Invalid mode: `{new_mode}`. Must be one of `ai`, `mention`, or `quiet`.",
-                        text_mode="styled",
+                    return ErrorResult(
+                        f"Invalid mode: `{new_mode}`. Must be one of `ai`, `mention`, or `quiet`."
                     )
             else:
-                await c.reply(f"Unknown config key: `{key}`.", text_mode="styled")
+                return ErrorResult(f"Unknown config key: `{key}`.")
         else:
-            await c.reply(f"Unknown subcommand: `{sub_command}`.", text_mode="styled")
+            return ErrorResult(f"Unknown subcommand: `{sub_command}`.")

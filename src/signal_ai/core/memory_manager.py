@@ -41,25 +41,25 @@ class ShortTermMemoryBackend(MemoryBackend):
     def __init__(self, persistence_manager: PersistenceManager):
         self._persistence_manager = persistence_manager
 
-    def add_memory(self, chat_id: str, memory_text: str) -> None:
+    async def add_memory(self, chat_id: str, memory_text: str) -> None:
         """
         Adds a memory to the chat history.
         This backend formats the raw text into the dictionary structure the history expects.
         """
-        chat_context = self._persistence_manager.load_context(chat_id)
+        chat_context = await self._persistence_manager.load_context(chat_id)
         # For now, assume memories added this way are from the user.
         # This can be made more flexible later if needed.
         memory_object = {"role": "user", "parts": [memory_text]}
         chat_context.history.append(memory_object)
-        self._persistence_manager.save_context(chat_id)
+        await self._persistence_manager.save_context(chat_id)
 
-    def retrieve_relevant_memories(
+    async def retrieve_relevant_memories(
         self, chat_id: str, query_text: str, k: int = 5
     ) -> List[str]:
         """
         Retrieves relevant memories using a simple keyword search.
         """
-        chat_context = self._persistence_manager.load_context(chat_id)
+        chat_context = await self._persistence_manager.load_context(chat_id)
         history = chat_context.history
 
         query_words = set(query_text.lower().split())

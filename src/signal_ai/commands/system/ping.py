@@ -1,6 +1,7 @@
-from typing import List
-from signalbot import Context
-from ...core.command import BaseCommand
+from typing import Any, Optional, Union
+
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class PingCommand(BaseCommand):
@@ -10,7 +11,9 @@ class PingCommand(BaseCommand):
 
     @property
     def description(self) -> str:
-        return "A simple command to check if the bot is responsive."
+        return "Checks if the bot is responsive."
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        await c.send("pong", text_mode="styled")
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        return TextResult("pong")

@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
-from typing import List
+from typing import Any, Optional, Union
 
 from markitdown import MarkItDown
-from signalbot import Context
-from ...core.command import BaseCommand
+
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 log = logging.getLogger(__name__)
 
@@ -12,7 +13,6 @@ log = logging.getLogger(__name__)
 class ConvertCommand(BaseCommand):
     """
     A command to convert an attached file or message text to Markdown using MarkItDown.
-    To use this command, send the bot a message with a file attached or text to convert.
     """
 
     @property
@@ -29,14 +29,16 @@ class ConvertCommand(BaseCommand):
             "Converts a file, URL, or text to Markdown."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
         """Convert the attached file or message text to Markdown"""
         log.info("ConvertCommand called")
 
         source_to_convert = " ".join(args) if args else None
 
-        if not source_to_convert and c.message.attachments_local_filenames:
-            attachment_filename = c.message.attachments_local_filenames[0]
+        if not source_to_convert and c.raw_context.message.attachments_local_filenames:
+            attachment_filename = c.raw_context.message.attachments_local_filenames[0]
             source_to_convert = (
                 Path.home()
                 / ".local/share/signal-cli/attachments"
@@ -48,12 +50,11 @@ class ConvertCommand(BaseCommand):
                 md = MarkItDown()
                 result = md.convert(str(source_to_convert))
                 markdown_content = result.text_content
-                await c.send(markdown_content, text_mode="styled")
+                return TextResult(markdown_content)
             except Exception as e:
                 log.exception(f"Error converting: {e}")
-                await c.send(f"Error converting: {e}", text_mode="styled")
+                return ErrorResult(f"Error converting: {e}")
         else:
-            await c.send(
-                "Please provide a file, URL, or text to convert after the !convert command.",
-                text_mode="styled",
+            return ErrorResult(
+                "Please provide a file, URL, or text to convert after the !convert command."
             )

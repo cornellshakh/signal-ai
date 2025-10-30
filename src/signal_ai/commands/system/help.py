@@ -1,7 +1,8 @@
-from typing import cast, Dict, Any
-from signalbot import Context
+from typing import cast, Dict, Any, Union, Optional
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, ErrorResult, TextResult
+from ...core.context import AppContext
 
 
 class HelpCommand(BaseCommand):
@@ -25,14 +26,15 @@ class HelpCommand(BaseCommand):
             },
         }
 
-    async def handle(self, c: Context, args: Dict[str, Any]) -> None:
-        bot = cast("SignalAIBot", c.bot)
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
         tool_manager = bot.tool_manager
         if not tool_manager:
-            await c.reply("Tool manager not available.")
-            return
+            return ErrorResult("Tool manager not available.")
 
-        command_name = args.get("command_name")
+        command_name = args[0] if args else None
         if command_name:
             if command_name in tool_manager.tools:
                 command = tool_manager.tools[command_name]
@@ -45,4 +47,4 @@ class HelpCommand(BaseCommand):
                 help_text += f"- `{name}`: {command.description}\n"
             help_text += "\nRun `!help [command]` for more details."
 
-        await c.reply(help_text, text_mode="styled")
+        return TextResult(help_text)

@@ -1,32 +1,34 @@
-:!/usr/bin/env bash
-
+#!/usr/bin/env bash
 set -eu
 
-# This script sets up the development environment.
+# This script sets up the development environment using Poetry.
 
-# Create a virtual environment.
-if [ ! -d .venv ]; then
-  echo "Creating virtual environment..."
-  python3 -m venv .venv
-  echo "Virtual environment created."
+# --- Dependency Checks ---
+if ! command -v python3 &> /dev/null
+then
+    echo "Error: python3 is not installed. Please install Python 3."
+    exit 1
 fi
 
-# Activate the virtual environment.
-source .venv/bin/activate
+if ! command -v poetry &> /dev/null
+then
+    echo "Error: poetry is not installed. Please install poetry."
+    exit 1
+fi
 
+# --- Main ---
+echo "Message: Creating virtual environment..."
 
-echo "Activating virtual environment..."
-source .venv/bin/activate
-echo "Virtual environment activated."
+# Create the virtual environment
+python3 -m venv .venv
 
-# Install dependencies from requirements.txt.
-echo "Installing dependencies from requirements.txt..."
-pip install -r requirements.txt
-echo "Dependencies installed."
+# Configure poetry to use the virtualenv in the project's root
+poetry config virtualenvs.in-project true --local
 
+echo "Message: Installing dependencies..."
 
-# Display the contents of the virtual environment's bin directory.
-echo "Listing contents of .venv/bin directory..."
-ls -l .venv/bin
+# Install dependencies using the virtual environment's python
+poetry run pip install --upgrade pip
+poetry install
 
-echo "Setup complete!"
+echo "Message: Setup complete. To activate the virtual environment, run 'poetry shell'."

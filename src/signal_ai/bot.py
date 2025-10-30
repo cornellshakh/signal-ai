@@ -1,224 +1,92 @@
-import os
-import json
-from asyncio import Queue
-import structlog
-from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from signalbot import SignalBot, Message, Context
-from signalbot.api import ReceiveMessagesError
-from signalbot.bot import SignalBotError
+from signalbot import SignalBot
 
-from .core.persistence import PersistenceManager
-from .core.message_handler import MessageHandler
 from .core.ai_client import AIClient
-from .core.logging import configure_logging
-from .core.tool_manager import ToolManager
-from .core.group_manager import GroupManager
+from .core.message_handler import MessageHandler
+from .core.persistence import PersistenceManager
 from .core.prompt_manager import PromptManager
-from .core.memory_manager import MemoryManager, ShortTermMemoryBackend
-from .core.reasoning_engine import ReasoningEngine
-from . import commands, tools
-
-
-log = structlog.get_logger()
+from .core.memory_manager import MemoryManager
+from .core.tool_manager import ToolManager
 
 
 class SignalAIBot(SignalBot):
     """
-    Custom bot class to hold the persistence manager and scheduler,
-    and to gracefully handle unknown message types.
+    The main application class for the Signal AI Bot.
     """
-
-    _queue: Queue
-    _running: bool
-    _signal: Any
 
     def __init__(self, config):
         super().__init__(config)
-        self.persistence_manager: Optional[PersistenceManager] = None
-        self.scheduler: Optional[BackgroundScheduler] = None
-        self.ai_client: Optional[AIClient] = None
-        self.tool_manager: Optional[ToolManager] = None
         self.message_handler: Optional[MessageHandler] = None
-        self.group_manager: Optional[GroupManager] = None
+        self.persistence_manager: Optional[PersistenceManager] = None
         self.prompt_manager: Optional[PromptManager] = None
         self.memory_manager: Optional[MemoryManager] = None
-        self.reasoning_engine: Optional[ReasoningEngine] = None
+        self.ai_client: Optional[AIClient] = None
+        self.tool_manager: Optional[ToolManager] = None
 
-    async def _produce(self, name: int) -> None:
+    async def _async_post_init(self):
         """
-        Overridden to handle KeyError when parsing messages.
+        Perform async post-initialization setup.
         """
-        log.info("producer.started", producer_name=name)
-        try:
-            async for raw_message in self._signal.receive():
-                log.debug("message.received.raw", raw_message=raw_message)
-
-                try:
-                    # Attempt to parse the raw message as JSON to inspect its contents
-                    parsed_message = json.loads(raw_message)
-                    envelope = parsed_message.get("envelope", {})
-
-                    # Filter out non-essential message types that don't contain user content
-                    if "receiptMessage" in envelope or "typingMessage" in envelope:
-                        log.info(
-                            "message.filtered",
-                            reason="Receipt or typing message",
-                            filtered_message=parsed_message,
-                        )
-                        continue
-
-                    # Handle sync messages intelligently to distinguish echoes from new messages
-                    if "syncMessage" in envelope:
-                        sync_message_data = envelope.get("syncMessage", {})
-
-                        if "readMessages" in sync_message_data:
-                            log.info(
-                                "message.filtered",
-                                reason="Read receipt sync message",
-                                filtered_message=parsed_message,
-                            )
-                            continue
-
-                        if "sentMessage" in sync_message_data:
-                            sent_message = sync_message_data.get("sentMessage", {})
-                            destination = sent_message.get("destination")
-
-                            # If the destination is not the bot's own number, it's an echo of a message
-                            # sent to another user. We must ignore it to prevent loops.
-                            if (
-                                destination
-                                and destination != self.config["phone_number"]
-                            ):
-                                log.info(
-                                    "message.filtered",
-                                    reason="Echo of an outgoing message to another user",
-                                    filtered_message=parsed_message,
-                                )
-                                continue
-                            # If the destination is the bot's own number, it's a "note to self" and should be processed.
-                        # Note: Incoming messages from a user's linked device (like "note to self")
-                        # can also arrive as a syncMessage with a 'dataMessage', so they are NOT filtered here.
-
-                except (json.JSONDecodeError, TypeError):
-                    # If it's not valid JSON, it's unlikely to be a message we want to process
-                    log.warning(
-                        "message.filter.failed",
-                        reason="Non-JSON message",
-                        raw_message=raw_message,
-                    )
-                    continue
-
-                try:
-                    message = await Message.parse(self._signal, raw_message)
-                except Exception:
-                    try:
-                        # Try to parse the raw message as JSON for structured logging
-                        parsed_message = json.loads(raw_message)
-                        log.warning(
-                            "message.parse.failed", parsed_message=parsed_message
-                        )
-                    except (json.JSONDecodeError, TypeError):
-                        # Fallback for non-JSON or already-decoded messages
-                        log.warning(
-                            "message.parse.failed",
-                            reason="unparseable",
-                            raw_message=raw_message,
-                        )
-                    continue
-
-                # Update groups if message is from an unknown group
-                if (
-                    message.is_group()
-                    and message.group is not None
-                    and self._groups_by_internal_id.get(message.group) is None
-                ):
-                    await self._detect_groups()
-
-                if self.message_handler:
-                    context = Context(self, message)
-                    await self.message_handler.handle(context)
-
-        except ReceiveMessagesError as e:
-            raise SignalBotError(f"Cannot receive messages: {e}") from e
-
-    async def _produce_consume_messages(
-        self,
-        producers: int = 1,
-        consumers: int = 1,
-    ) -> None:
-        """
-        Overridden to set the number of consumers to 1.
-        """
-        return await super()._produce_consume_messages(
-            producers=producers, consumers=consumers
-        )
-
-
-def main() -> None:
-    """Main function to run the bot."""
-    try:
-        configure_logging()
-        signal_service = os.environ.get("SIGNAL_SERVICE")
-        phone_number = os.environ.get("PHONE_NUMBER")
-
-        log.info("bot.configured.signal_service", signal_service=signal_service)
-        log.info("bot.configured.phone_number", phone_number=phone_number)
-
-        config = {
-            "signal_service": signal_service,
-            "phone_number": phone_number,
-            "download_attachments": True,
-        }
-        bot = SignalAIBot(config)
-
-        # Initialize and attach PersistenceManager
-        db_path = Path.home() / ".signal-ai" / "db.json"
-        bot.persistence_manager = PersistenceManager(db_path)
-
-        # Initialize and attach PromptManager
-        bot.prompt_manager = PromptManager()
-
-        # Initialize and attach MemoryManager
-        if bot.persistence_manager:
-            short_term_memory = ShortTermMemoryBackend(bot.persistence_manager)
-            bot.memory_manager = MemoryManager(backend=short_term_memory)
-
-        # Initialize and attach AIClient
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if api_key and bot.prompt_manager and bot.memory_manager:
-            bot.ai_client = AIClient(
-                api_key,
-                prompt_manager=bot.prompt_manager,
-                memory_manager=bot.memory_manager,
-            )
-
-        # Initialize and attach ToolManager and MessageHandler
-        bot.tool_manager = ToolManager(command_package=commands, tool_package=tools)
-        if bot.ai_client and bot.tool_manager:
-            bot.reasoning_engine = ReasoningEngine(
-                ai_client=bot.ai_client, tool_manager=bot.tool_manager
-            )
-        if bot.reasoning_engine:
-            bot.message_handler = MessageHandler(
-                dispatcher=bot.tool_manager, reasoning_engine=bot.reasoning_engine
-            )
-        bot.group_manager = GroupManager(bot)
-
-        # Initialize and attach scheduler
-        scheduler = BackgroundScheduler()
-        scheduler.add_job(bot.persistence_manager.backup_database, "interval", hours=1)
-        # Placeholder for summarization service
-        # scheduler.add_job(summarization_service, "interval", hours=6)
-        bot.scheduler = scheduler
-
-        bot.start()
-
-    except Exception as e:
-        log.error("bot.error", error=str(e))
+        await super()._async_post_init()
+        if self.message_handler:
+            await self.message_handler.start()
 
 
 if __name__ == "__main__":
-    main()
+    import os
+    from pathlib import Path
+    from .core.config import settings
+    from .core.reasoning_engine import ReasoningEngine
+    from .core.memory_manager import ShortTermMemoryBackend
+    from .commands.system.catch_all import CatchAllCommand
+    from .core.logging import configure_logging
+
+    configure_logging()
+
+    # 1. Create bot instance
+    config = {
+        "signal_service": settings.signal_service,
+        "phone_number": settings.signal_phone_number,
+        "storage": {
+            "type": "sqlite",
+            "database": "/app/db/signalbot.sqlite",
+        },
+    }
+    bot = SignalAIBot(config)
+
+    # 2. Initialize and wire components
+    db_dir = Path("/app/db")
+    db_dir.mkdir(exist_ok=True)
+    backup_dir = db_dir / "backups"
+    bot.persistence_manager = PersistenceManager(
+        db_url=settings.database_url,
+        redis_url=settings.redis_url,
+        backup_dir=backup_dir,
+    )
+    bot.prompt_manager = PromptManager("src/signal_ai/prompts.yaml")
+    bot.memory_manager = MemoryManager(
+        ShortTermMemoryBackend(bot.persistence_manager)
+    )
+    bot.tool_manager = ToolManager(["src.signal_ai.commands"])
+    bot.ai_client = AIClient(
+        api_key=settings.google_api_key,
+        prompt_manager=bot.prompt_manager,
+        memory_manager=bot.memory_manager,
+    )
+    reasoning_engine = ReasoningEngine(
+        ai_client=bot.ai_client,
+        tool_manager=bot.tool_manager,
+        persistence_manager=bot.persistence_manager,
+        prompt_manager=bot.prompt_manager,
+    )
+    bot.message_handler = MessageHandler(
+        tool_manager=bot.tool_manager,
+        reasoning_engine=reasoning_engine,
+        persistence_manager=bot.persistence_manager,
+    )
+
+    # 3. Register commands and start bot
+    bot.register(CatchAllCommand())
+    bot.start()

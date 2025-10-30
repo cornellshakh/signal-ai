@@ -1,8 +1,9 @@
-from typing import List, cast
+from typing import Any, Optional, Union, cast
 from datetime import datetime, timedelta
-from signalbot import Context
+
 from ...bot import SignalAIBot
-from ...core.command import BaseCommand
+from ...core.command import BaseCommand, TextResult, ErrorResult
+from ...core.context import AppContext
 
 
 class RemindCommand(BaseCommand):
@@ -23,18 +24,16 @@ class RemindCommand(BaseCommand):
             "- `at <time> <message>`: Set a reminder at a specific time (e.g., `14:30`)."
         )
 
-    async def handle(self, c: Context, args: List[str]) -> None:
-        bot = cast("SignalAIBot", c.bot)
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        bot = cast(SignalAIBot, c.raw_context.bot)
         scheduler = bot.scheduler
         if not scheduler:
-            await c.reply("Scheduler not available.")
-            return
+            return ErrorResult("Scheduler not available.")
 
-        if len(args) < 3:
-            await c.reply(
-                "Usage: `!remind (in|at) <time> <message>`", text_mode="styled"
-            )
-            return
+        if not args or len(args) < 3:
+            return ErrorResult("Usage: `!remind (in|at) <time> <message>`")
 
         when_type = args[0]
         time_str = args[1]
@@ -42,7 +41,6 @@ class RemindCommand(BaseCommand):
 
         if when_type == "in":
             try:
-                # Simple parsing for "in" reminders, e.g., "10s", "5m", "1h"
                 value = int(time_str[:-1])
                 unit = time_str[-1]
                 if unit == "s":
@@ -56,23 +54,20 @@ class RemindCommand(BaseCommand):
 
                 run_date = datetime.now() + delta
                 scheduler.add_job(
-                    c.reply,
+                    c.raw_context.reply,
                     "date",
                     run_date=run_date,
                     args=[f"Reminder: {message}"],
                     kwargs={"text_mode": "styled"},
                 )
-                await c.reply(
-                    f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}.",
-                    text_mode="styled",
+                return TextResult(
+                    f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
                 )
 
             except (ValueError, IndexError):
-                await c.reply(
-                    "Invalid time format for 'in'. Use something like `10s`, `5m`, or `1h`.",
-                    text_mode="styled",
+                return ErrorResult(
+                    "Invalid time format for 'in'. Use something like `10s`, `5m`, or `1h`."
                 )
-                return
 
         elif when_type == "at":
             try:
@@ -81,26 +76,20 @@ class RemindCommand(BaseCommand):
                     hour=run_date.hour, minute=run_date.minute, second=0, microsecond=0
                 )
                 if run_date < datetime.now():
-                    run_date += timedelta(
-                        days=1
-                    )  # if time is in the past, schedule for tomorrow
+                    run_date += timedelta(days=1)
 
                 scheduler.add_job(
-                    c.reply,
+                    c.raw_context.reply,
                     "date",
                     run_date=run_date,
                     args=[f"Reminder: {message}"],
                     kwargs={"text_mode": "styled"},
                 )
-                await c.reply(
-                    f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}.",
-                    text_mode="styled",
+                return TextResult(
+                    f"Okay, I will remind you at {run_date.strftime('%H:%M:%S')}."
                 )
 
             except ValueError:
-                await c.reply(
-                    "Invalid time format for 'at'. Use HH:MM.", text_mode="styled"
-                )
-                return
+                return ErrorResult("Invalid time format for 'at'. Use HH:MM.")
         else:
-            await c.reply(f"Unknown subcommand: `{when_type}`.", text_mode="styled")
+            return ErrorResult(f"Unknown subcommand: `{when_type}`.")

@@ -1,7 +1,34 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Union
 
-from signalbot import Context
+from .context import AppContext
+
+
+class CommandResult(ABC):
+    """Abstract base class for command results."""
+
+    pass
+
+
+class TextResult(CommandResult):
+    """Represents a simple text result from a command."""
+
+    def __init__(self, text: str):
+        self.text = text
+
+
+class ErrorResult(CommandResult):
+    """Represents an error result from a command."""
+
+    def __init__(self, error: str):
+        self.error = error
+
+
+class ImageResult(CommandResult):
+    """Represents an image result from a command."""
+
+    def __init__(self, image_path: str):
+        self.image_path = image_path
 
 
 class BaseCommand(ABC):
@@ -25,8 +52,13 @@ class BaseCommand(ABC):
         return None
 
     @abstractmethod
-    async def handle(self, c: Context, args: Optional[Any] = None) -> None:
-        """The main execution logic for the command."""
+    async def handle(
+        self, c: AppContext, args: Optional[Any] = None
+    ) -> Union[TextResult, ErrorResult, None]:
+        """
+        The main execution logic for the command.
+        It now returns a result object instead of having side effects.
+        """
         pass
 
     def help(self) -> str:
