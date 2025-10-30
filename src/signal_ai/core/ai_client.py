@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING, Dict, List, Any, Optional, AsyncGenerator
 
 import google.generativeai as genai
@@ -15,6 +14,7 @@ from google.ai.generativelanguage_v1beta.types.generative_service import (
     GenerateContentResponse,
 )
 from google.api_core import exceptions as api_core_exceptions
+import structlog
 import redis
 from redis.exceptions import RedisError
 from cachetools import LRUCache
@@ -22,6 +22,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .prompt_manager import PromptManager
 from .memory_manager import MemoryManager
+
+
+log = structlog.get_logger()
 
 
 class AIClient:
@@ -50,7 +53,7 @@ class AIClient:
         self.model = self._get_generative_model("gemini-flash-latest")
         self._chat_sessions: LRUCache[str, ChatSession] = LRUCache(maxsize=100)
         self._redis = redis.Redis(host=redis_host, port=redis_port, db=0)
-        logging.info("AIClient initialized.")
+        log.info("AIClient initialized.")
 
     def _get_generative_model(
         self,
@@ -58,7 +61,7 @@ class AIClient:
         tools: Optional[List[Any]] = None,
     ) -> "GenerativeModel":
         """Retrieves a generative model."""
-        logging.info(f"Initializing model: {model_name}")
+        log.info("model.init", model_name=model_name)
         return GenerativeModel(
             model_name,
             tools=tools,
@@ -72,23 +75,23 @@ class AIClient:
         """
         # Level 1: In-memory LRU cache (hot)
         if chat_id in self._chat_sessions:
-            logging.info(f"Hot cache hit for chat_id: {chat_id}")
+            log.info("cache.hot.hit", chat_id=chat_id)
             return self._chat_sessions[chat_id]
 
         # Level 2: Redis cache (warm)
         try:
             cached_history_json = await self._redis.get(chat_id)
             if cached_history_json:
-                logging.info(f"Warm cache hit for chat_id: {chat_id}")
+                log.info("cache.warm.hit", chat_id=chat_id)
                 cached_history = json.loads(cached_history_json.decode("utf-8"))
                 chat_session = self.model.start_chat(history=cached_history)
                 self._chat_sessions[chat_id] = chat_session
                 return chat_session
         except RedisError as e:
-            logging.error(f"Redis error on get: {e}", exc_info=True)
+            log.error("redis.error", error=e, exc_info=True)
 
         # Level 3: Initial history from TinyDB (cold)
-        logging.info(f"Cold cache miss for chat_id: {chat_id}")
+        log.info("cache.miss", chat_id=chat_id)
         chat_session = self.model.start_chat(history=initial_history)
         self._chat_sessions[chat_id] = chat_session
         return chat_session
@@ -102,27 +105,23 @@ class AIClient:
         """
         Generates a response from the AI model.
         """
-        logging.info(
-            f"Generating AI response for chat_id: {chat_id}, prompt: '{prompt}'"
-        )
+        log.info("ai.response.start", chat_id=chat_id, prompt=prompt)
         try:
             chat_session = await self._get_chat_session(chat_id, history)
             response = await chat_session.send_message_async(prompt)
             self._update_caches(chat_id, chat_session.history)
             if response.candidates:
                 return response.candidates[0].content.parts[0].text
-            logging.warning("No candidates found in the response.")
+            log.warning("ai.response.no_candidates")
             return ""
         except (
             api_core_exceptions.GoogleAPICallError,
             api_core_exceptions.InvalidArgument,
         ) as e:
-            logging.error(f"API error generating AI response: {e}", exc_info=True)
+            log.error("ai.response.api.error", error=e, exc_info=True)
             raise
         except Exception as e:
-            logging.error(
-                f"Unexpected error generating AI response: {e}", exc_info=True
-            )
+            log.error("ai.response.unexpected.error", error=e, exc_info=True)
             raise
 
     @retry(
@@ -134,7 +133,7 @@ class AIClient:
         """
         Generates a streaming response from the AI model.
         """
-        logging.info(f"Generating AI stream for chat_id: {chat_id}, prompt: '{prompt}'")
+        log.info("ai.stream.start", chat_id=chat_id, prompt=prompt)
         try:
             chat_session = await self._get_chat_session(chat_id, history)
             stream = await chat_session.send_message_async(prompt, stream=True)
@@ -145,10 +144,10 @@ class AIClient:
             api_core_exceptions.GoogleAPICallError,
             api_core_exceptions.InvalidArgument,
         ) as e:
-            logging.error(f"API error generating AI stream: {e}", exc_info=True)
+            log.error("ai.stream.api.error", error=e, exc_info=True)
             raise
         except Exception as e:
-            logging.error(f"Unexpected error generating AI stream: {e}", exc_info=True)
+            log.error("ai.stream.unexpected.error", error=e, exc_info=True)
             raise
 
     def _update_caches(self, chat_id: str, history: List[Any]):
@@ -163,14 +162,11 @@ class AIClient:
             ]
             history_json = json.dumps(serializable_history)
             self._redis.set(chat_id, history_json)
-            logging.info(f"Updated Redis cache for chat_id: {chat_id}")
+            log.info("cache.update", chat_id=chat_id)
         except RedisError as e:
-            logging.error(f"Redis error on set: {e}", exc_info=True)
+            log.error("redis.error", error=e, exc_info=True)
         except Exception as e:
-            logging.error(
-                f"Failed to serialize and cache history for chat_id {chat_id}: {e}",
-                exc_info=True,
-            )
+            log.error("cache.serialization.error", chat_id=chat_id, error=e, exc_info=True)
 
     def clear_chat_session(self, chat_id: str):
         """
@@ -179,14 +175,14 @@ class AIClient:
         # Clear from in-memory LRU cache
         if chat_id in self._chat_sessions:
             del self._chat_sessions[chat_id]
-            logging.info(f"Cleared in-memory cache for chat_id: {chat_id}")
+            log.info("cache.clear.in_memory", chat_id=chat_id)
 
         # Clear from Redis cache
         try:
             self._redis.delete(chat_id)
-            logging.info(f"Cleared Redis cache for chat_id: {chat_id}")
+            log.info("cache.clear.redis", chat_id=chat_id)
         except RedisError as e:
-            logging.error(f"Redis error on delete: {e}", exc_info=True)
+            log.error("redis.error", error=e, exc_info=True)
 
     @retry(
         stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -201,9 +197,7 @@ class AIClient:
         """
         Generates a response from the AI model, making it aware of available tools.
         """
-        logging.info(
-            f"Generating AI response with tools for chat_id: {chat_id}, prompt: '{prompt}'"
-        )
+        log.info("ai.response.tool.start", chat_id=chat_id, prompt=prompt)
         if not prompt:
             # Return an empty response if the prompt is empty, as the SDK will raise an error.
             # The reasoning engine will interpret this as the end of the conversation.
@@ -233,12 +227,8 @@ class AIClient:
             api_core_exceptions.GoogleAPICallError,
             api_core_exceptions.InvalidArgument,
         ) as e:
-            logging.error(
-                f"API error generating AI response with tools: {e}", exc_info=True
-            )
+            log.error("ai.response.tool.api.error", error=e, exc_info=True)
             raise
         except Exception as e:
-            logging.error(
-                f"Unexpected error generating AI response with tools: {e}", exc_info=True
-            )
+            log.error("ai.response.tool.unexpected.error", error=e, exc_info=True)
             raise

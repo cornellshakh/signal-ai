@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import subprocess
 from datetime import datetime
@@ -13,7 +12,11 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from .context import Context
 
 
+import structlog
+
 Base = declarative_base()
+
+log = structlog.get_logger()
 
 
 class ContextModel(Base):
@@ -41,7 +44,7 @@ class PersistenceManager:
         self._contexts: Dict[str, Context] = {}
         self._create_tables()
         self._backup_dir.mkdir(parents=True, exist_ok=True)
-        logging.info("PersistenceManager initialized with PostgreSQL and Redis backends.")
+        log.info("PersistenceManager initialized.")
 
     def _create_tables(self):
         """Creates the necessary database tables if they do not exist."""
@@ -63,7 +66,7 @@ class PersistenceManager:
         # 1. Try to load from Redis cache
         cached_context = await self._redis.get(f"context:{chat_id}")
         if cached_context:
-            logging.info(f"Loaded context for chat_id {chat_id} from cache.")
+            log.info("context.load.cache", chat_id=chat_id)
             context = Context.model_validate_json(cached_context.decode("utf-8"))
             self._contexts[chat_id] = context
             return context
@@ -73,11 +76,11 @@ class PersistenceManager:
         try:
             result = session.query(ContextModel).filter_by(id=chat_id).first()
             if result:
-                logging.info(f"Loaded context for chat_id {chat_id} from database.")
+                log.info("context.load.db", chat_id=chat_id)
                 context = Context.model_validate_json(str(result.data))
                 await self._redis.set(f"context:{chat_id}", context.model_dump_json())
             else:
-                logging.info(f"No existing context for chat_id {chat_id}. Creating new one.")
+                log.info("context.create", chat_id=chat_id)
                 context = Context()
                 await self.save_context(chat_id, context)  # Save immediately to ensure it exists in DB
 
@@ -96,7 +99,7 @@ class PersistenceManager:
         """
         context_to_save = context or self._contexts.get(chat_id)
         if not context_to_save:
-            logging.warning(f"Attempted to save a non-existent context for chat_id: {chat_id}")
+            log.warning("context.save.non_existent", chat_id=chat_id)
             return
 
         # 1. Save to PostgreSQL
@@ -106,16 +109,16 @@ class PersistenceManager:
             db_context = ContextModel(id=chat_id, data=context_json)
             session.merge(db_context)
             session.commit()
-            logging.info(f"Saved context for chat_id {chat_id} to database.")
+            log.info("context.save.db", chat_id=chat_id)
         except Exception as e:
-            logging.error(f"Failed to save context for chat_id {chat_id} to database: {e}")
+            log.error("context.save.db.error", chat_id=chat_id, error=e, exc_info=True)
             session.rollback()
         finally:
             session.close()
 
         # 2. Update Redis cache
         await self._redis.set(f"context:{chat_id}", context_to_save.model_dump_json())
-        logging.info(f"Updated cache for chat_id: {chat_id}")
+        log.info("context.save.cache", chat_id=chat_id)
 
     def backup_database(self):
         """
@@ -146,8 +149,8 @@ class PersistenceManager:
                 capture_output=True,
                 text=True,
             )
-            logging.info(f"Database backup created successfully at {backup_path}")
+            log.info("db.backup.success", backup_path=backup_path)
         except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to create database backup: {e.stderr}")
+            log.error("db.backup.failed", error=e.stderr, exc_info=True)
         except FileNotFoundError:
-            logging.error("pg_dump command not found. Please ensure PostgreSQL client tools are installed.")
+            log.error("db.backup.pg_dump_not_found")

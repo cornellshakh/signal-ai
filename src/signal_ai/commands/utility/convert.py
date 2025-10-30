@@ -1,4 +1,4 @@
-import logging
+import structlog
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -7,7 +7,7 @@ from markitdown import MarkItDown
 from ...core.command import BaseCommand, TextResult, ErrorResult
 from ...core.context import AppContext
 
-log = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 class ConvertCommand(BaseCommand):
@@ -33,7 +33,7 @@ class ConvertCommand(BaseCommand):
         self, c: AppContext, args: Optional[Any] = None
     ) -> Union[TextResult, ErrorResult, None]:
         """Convert the attached file or message text to Markdown"""
-        log.info("ConvertCommand called")
+        log.info("convert.start")
 
         source_to_convert = " ".join(args) if args else None
 
@@ -52,7 +52,7 @@ class ConvertCommand(BaseCommand):
                 markdown_content = result.text_content
                 return TextResult(markdown_content)
             except Exception as e:
-                log.exception(f"Error converting: {e}")
+                log.exception("convert.error", error=e)
                 return ErrorResult(f"Error converting: {e}")
         else:
             return ErrorResult(

@@ -51,15 +51,14 @@ if __name__ == "__main__":
         "phone_number": settings.signal_phone_number,
         "storage": {
             "type": "sqlite",
-            "database": "/app/db/signalbot.sqlite",
+            "sqlite_db": "/home/.local/share/signal-cli/signalbot.sqlite",
         },
     }
     bot = SignalAIBot(config)
 
     # 2. Initialize and wire components
-    db_dir = Path("/app/db")
-    db_dir.mkdir(exist_ok=True)
-    backup_dir = db_dir / "backups"
+    backup_dir = Path("/home/.local/share/signal-cli/backups")
+    backup_dir.mkdir(exist_ok=True)
     bot.persistence_manager = PersistenceManager(
         db_url=settings.database_url,
         redis_url=settings.redis_url,

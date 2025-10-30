@@ -7,6 +7,7 @@ from .tool_manager import ToolManager
 from .reasoning_engine import ReasoningEngine
 from .persistence import PersistenceManager
 from .command import TextResult, ErrorResult, ImageResult
+from .decorators import with_correlation_id
 
 log = structlog.get_logger()
 
@@ -55,6 +56,7 @@ class MessageHandler:
             finally:
                 self.queue.task_done()
 
+    @with_correlation_id
     async def _handle_message(self, context: SignalBotContext):
         """
         Internal message handling logic.

@@ -1,3 +1,6 @@
+import uuid
+import structlog
+from functools import wraps
 from ..core.command import BaseCommand
 
 
@@ -34,3 +37,20 @@ def argument(name, type=str, help=""):
         return func
 
     return decorator
+
+
+def with_correlation_id(func):
+    """
+    A decorator that adds a correlation_id to the log context.
+    """
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        correlation_id = str(uuid.uuid4())
+        structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            structlog.contextvars.clear_contextvars()
+
+    return wrapper

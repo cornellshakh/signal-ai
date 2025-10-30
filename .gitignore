@@ -18,6 +18,7 @@ signal-cli-config/
 
 # Editor configs
 .vscode/
+.kilocode/
 
 # Build artifacts
 build/
