@@ -23,21 +23,15 @@ class ToolManager:
         tools = {}
         for module_path in module_paths:
             try:
-                package = importlib.import_module(module_path)
-                for _, name, is_pkg in pkgutil.walk_packages(
-                    package.__path__, package.__name__ + "."
-                ):
-                    if not is_pkg:
-                        log.debug("tool_discovery.import", module=name)
-                        module = importlib.import_module(name)
-                        for _, member in inspect.getmembers(module):
-                            if (
-                                inspect.isclass(member)
-                                and issubclass(member, BaseCommand)
-                                and member is not BaseCommand
-                            ):
-                                tool_instance = member()
-                                tools[tool_instance.name] = tool_instance
+                module = importlib.import_module(module_path)
+                for _, member in inspect.getmembers(module):
+                    if (
+                        inspect.isclass(member)
+                        and issubclass(member, BaseCommand)
+                        and member is not BaseCommand
+                    ):
+                        tool_instance = member()
+                        tools[tool_instance.name] = tool_instance
             except Exception as e:
                 log.error(
                     "tool_discovery.error",

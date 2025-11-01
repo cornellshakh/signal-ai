@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Manages the application's configuration settings."""
 
-    model_config = SettingsConfigDict(extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     signal_service: str = Field(..., alias="SIGNAL_SERVICE")
     signal_phone_number: str = Field(..., alias="PHONE_NUMBER")
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         """Returns the full database connection URL."""
         return (
-            f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}@"
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@"
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 

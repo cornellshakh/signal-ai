@@ -15,6 +15,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 signal-cli-config/
+.cache/
 
 # Editor configs
 .vscode/
@@ -27,3 +28,7 @@ dist/
 
 # Local development environment
 .venv/
+
+
+# Data files
+.data/

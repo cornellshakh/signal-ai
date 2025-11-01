@@ -1,12 +1,10 @@
-version: "3.8"
-
 services:
   signal-cli-rest-api:
     image: bbernhard/signal-cli-rest-api:latest
     ports:
       - "8080:8080"
     volumes:
-      - ./signal-cli-config:/home/.local/share/signal-cli
+      - ../.data/signal-cli-config:/home/.local/share/signal-cli
     environment:
       MODE: json-rpc
     restart: unless-stopped
@@ -32,10 +30,11 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   bot:
     build: .
+    command: ["poetry", "run", "python", "-m", "src.signal_ai.app.main"]
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy
@@ -45,12 +44,13 @@ services:
         condition: service_started
     environment:
       LOG_LEVEL: DEBUG
+      PYTHONPATH: "/app/src:/signalbot"
     env_file:
       - .env
     volumes:
       - ./src:/app/src
-      - ./signal-cli-config:/home/.local/share/signal-cli
-      - ./signal-ai-data:/root/.signal-ai
+      - ../signalbot:/signalbot
+      - ../.data/signal-ai-data:/root/.signal-ai
       - poetry-cache:/app/.cache
     restart: unless-stopped
 

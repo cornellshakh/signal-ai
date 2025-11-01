@@ -11,7 +11,7 @@ def test_discover_tools():
     """
     tool_manager = ToolManager(
         module_paths=[
-            "signal_ai.commands.system.ping",
+            "signal_ai.tools.system.ping",
             "signal_ai.tools.web_search",
         ]
     )
@@ -29,16 +29,16 @@ async def test_dispatch_known_command(app_context, mocker):
     """
     Tests that the dispatch method correctly calls a known command.
     """
-    tool_manager = ToolManager(module_paths=["signal_ai.commands.system.ping"])
+    tool_manager = ToolManager(module_paths=["signal_ai.tools.system.ping"])
     app_context.message_text = "!ping"
 
     # Mock the handle method of the ping command
     mock_ping_handle = AsyncMock()
     mocker.patch.object(tool_manager.tools["ping"], "handle", mock_ping_handle)
 
-    await tool_manager.dispatch(app_context)
+    await tool_manager.dispatch("ping", app_context)
 
-    mock_ping_handle.assert_called_once_with(app_context, None)
+    mock_ping_handle.assert_called_once_with(app_context, {})
 
 
 @pytest.mark.asyncio
@@ -49,6 +49,9 @@ async def test_dispatch_unknown_command(app_context):
     tool_manager = ToolManager(module_paths=[])
     app_context.message_text = "!unknown"
 
-    await tool_manager.dispatch(app_context)
+    await tool_manager.dispatch("unknown", app_context)
 
-    app_context.raw_context.reply.assert_called_once_with("Unknown command: unknown")
+    result = await tool_manager.dispatch("unknown", app_context)
+    from signal_ai.core.command import ErrorResult
+    assert isinstance(result, ErrorResult)
+    assert result.error == "Unknown command: unknown"

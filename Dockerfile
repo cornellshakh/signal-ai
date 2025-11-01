@@ -20,4 +20,7 @@ RUN poetry config virtualenvs.create false \
 # Copy the rest of the application code
 COPY ./src /app/src
 
-CMD ["python", "-m", "src.signal_ai.bot"]
+# Add src to PYTHONPATH
+ENV PYTHONPATH "${PYTHONPATH}:/app/src"
+
+CMD ["poetry", "run", "python", "-m", "src.signal_ai.app.main"]

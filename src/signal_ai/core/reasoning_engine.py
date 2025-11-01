@@ -1,7 +1,7 @@
 import structlog
 from google.generativeai.types import FunctionDeclaration, ContentDict
 
-from .ai_client import AIClient
+from signal_ai.infrastructure.ai import AIClient
 from .tool_manager import ToolManager
 from .context import AppContext
 
