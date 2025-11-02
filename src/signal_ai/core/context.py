@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field
-from signalbot.context import Context as SignalBotContext
+from signal_client.context import Context as SignalBotContext
 
 if TYPE_CHECKING:
     from .persistence import PersistenceManager
@@ -49,10 +49,10 @@ async def to_app_context(
     context: SignalBotContext, persistence_manager: "PersistenceManager"
 ) -> AppContext:
     """
-    Adapter function to convert a signalbot.Context to an AppContext.
+    Adapter function to convert a signal_client.Context to an AppContext.
 
     Args:
-        context: The original context from the signalbot library.
+        context: The original context from the signal_client library.
         persistence_manager: The application's persistence manager.
 
     Returns:

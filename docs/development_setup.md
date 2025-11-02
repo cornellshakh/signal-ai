@@ -1,39 +1,35 @@
 # Development Environment Setup Guide
 
-This guide provides the steps to set up a fully functional and conflict-free development environment for the `signal-ai` bot and its `signalbot` library fork.
+This guide provides the steps to set up a fully functional development environment for the `signal-ai` bot and the `signal-client` library.
 
-**IMPORTANT:** The project has just been restructured. Your immediate next steps are below. The `setup_workspace.sh` script is for future use (e.g., on a fresh clone).
+**IMPORTANT:** The project has been restructured to use `signal-client` instead of `signalbot`. If you have an old setup, you must remove your existing virtual environments before proceeding.
 
-## Immediate Next Steps
+## Setup from a Fresh Clone
 
-1.  **Close and Re-open VSCode:**
+For a new setup or to fix an old one, follow these steps:
 
-    - Close your current VSCode window (which is likely open to the `signal-ai` folder).
-    - Open VSCode again, but this time, open the **`signal-ai.code-workspace`** file located _outside_ the `signal-ai` folder.
-    - From your terminal, you can run: `code ../signal-ai.code-workspace`
+1.  **Clean Up Old Virtual Environments (if applicable):**
 
-2.  **Install Dependencies:**
+    - If you have a `.venv` directory inside your `signal-ai` or `signal-client` folders, delete them.
+
+2.  **Open the VS Code Workspace:**
+
+    - Open the `signal.code-workspace` file located in the root of the project. This is the primary way you should work with this project.
+    - From your terminal, you can run: `code ../signal.code-workspace` (if you are inside `signal-ai`).
+
+3.  **Run the Setup Script:**
 
     - Once the workspace is open, open a new terminal within VSCode (`Ctrl+` or `Cmd+`).
     - It should open in the `signal-ai` directory.
-    - Run the command: `poetry install`
-    - This will install all dependencies, including `signalbot` from the new location.
+    - Run the setup script:
+      ```bash
+      ./scripts/setup.sh
+      ```
+    - This will install all dependencies for both `signal-ai` and `signal-client`.
 
-3.  **Select Python Interpreter:**
+4.  **Select Python Interpreter:**
     - Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
     - Search for and select `Python: Select Interpreter`.
     - Choose the one that points to `./.venv/bin/python`. The workspace settings should default to this, but it's good to confirm.
 
-Your environment is now ready. You can edit files in both `signal-ai` and `signalbot` folders, and the changes will work together seamlessly.
-
----
-
-## Full Setup from a Fresh Clone
-
-For future reference, if you are setting up this project from a fresh clone, you can use the automated script.
-
-1.  Run the setup script from within the `signal-ai` directory:
-    ```bash
-    ./scripts/setup_workspace.sh
-    ```
-2.  Follow the "Immediate Next Steps" above (close the folder, open the workspace, select interpreter).
+Your environment is now ready. You can edit files in both `signal-ai` and `signal-client` folders, and the changes will work together seamlessly.

@@ -13,7 +13,7 @@
       "args": [
         "mcp-server-sqlite",
         "--db-path",
-        "/home/user/Work/signal-ai/signal-cli-config/signalbot.sqlite"
+        "../.data/signal_client.sqlite"
       ]
     },
     "postgres": {

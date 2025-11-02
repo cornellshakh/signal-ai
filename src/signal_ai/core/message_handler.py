@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 
-from signalbot.context import Context as SignalBotContext
+from signal_client.context import Context as SignalBotContext
 from .context import to_app_context
 from .tool_manager import ToolManager
 from .reasoning_engine import ReasoningEngine

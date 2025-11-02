@@ -3,7 +3,7 @@ import structlog
 from typing import Dict, Any
 
 from ..core.command import BaseCommand
-from signalbot.context import Context
+from signal_client.context import Context
 
 log = structlog.get_logger()
 

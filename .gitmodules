@@ -1,3 +1,0 @@
-[submodule "vendor/signalbot"]
-	path = vendor/signalbot
-	url = https://github.com/cornellshakh/signalbot.git

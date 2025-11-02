@@ -10,7 +10,7 @@ def app_context():
     # Create a mock for the persistent context
     mock_persistent_context = MagicMock(spec=PersistentContext)
 
-    # Create a mock for the raw signalbot context
+    # Create a mock for the raw signal_client context
     mock_raw_context = MagicMock(spec=SignalBotContext)
     mock_raw_context.reply = AsyncMock()
 

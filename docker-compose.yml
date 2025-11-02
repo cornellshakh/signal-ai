@@ -44,12 +44,12 @@ services:
         condition: service_started
     environment:
       LOG_LEVEL: DEBUG
-      PYTHONPATH: "/app/src:/signalbot"
+      PYTHONPATH: "/app/src:/signal-client"
     env_file:
       - .env
     volumes:
       - ./src:/app/src
-      - ../signalbot:/signalbot
+      - ../signal-client:/signal-client
       - ../.data/signal-ai-data:/root/.signal-ai
       - poetry-cache:/app/.cache
     restart: unless-stopped

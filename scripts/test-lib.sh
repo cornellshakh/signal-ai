@@ -1,3 +1,3 @@
 #!/bin/bash
 set -e
-poetry run pytest ../signalbot/tests
+poetry run pytest ../signal-client/tests

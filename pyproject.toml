@@ -46,7 +46,7 @@ dependencies = [
 packages = [{include = "signal_ai", from = "src"}]
 
 [tool.poetry.dependencies]
-signalbot = {path = "../signalbot", develop = true}
+signal-client = {path = "../signal-client", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.5"
