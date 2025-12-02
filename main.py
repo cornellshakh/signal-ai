@@ -16,7 +16,6 @@ Features demonstrated:
 
 from __future__ import annotations
 
-
 import argparse
 import asyncio
 import base64
@@ -27,57 +26,39 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-
 import structlog
-
 
 from signal_client import Context, SignalClient
 
-
 from signal_client.app import Application
-
 
 from signal_client.command import command
 
-
 from signal_client.config import Settings
-
 
 from signal_client.infrastructure.schemas.groups import CreateGroupRequest
 
-
 from signal_client.infrastructure.schemas.link_preview import LinkPreview
-
 
 from signal_client.infrastructure.schemas.requests import SendMessageRequest
 
-
 from signal_client.observability.logging import ensure_structlog_configured
-
 
 from signal_client.observability.metrics import start_metrics_server
 
-
 log = structlog.get_logger()
 
-
 # ======================================================================================
-
 
 # Configuration
 
-
 # See: examples/config_resiliency_and_metrics.py
-
 
 # ======================================================================================
 
-
 # Override defaults without touching environment variables for secrets.
 
-
 # This dictionary is passed directly to the SignalClient constructor.
-
 
 CONFIG: dict[str, Any] = {
     # Backpressure and worker sizing.
@@ -103,45 +84,53 @@ CONFIG: dict[str, Any] = {
     "dlq_max_retries": 3,
 }
 
-
 # ======================================================================================
-
 
 # Shared State
 
-
 # ======================================================================================
-
 
 # In-memory balance tracking for the `!balance` command.
 
-
 # NOTE: This is for demonstration only. In a real application, this should
-
 
 # be persisted in a database.
 
-
 _balances: dict[str, int] = {}
-
-
-
-
 
 # Help text, generated dynamically on startup.
 
+HELP_TEXT = """*Available commands:*
 
-HELP_TEXT = "Help text not available."
+- `!ping`: A basic command to check if the bot is alive.
 
+- `!echo`: Demonstrates typing indicators.
+
+- `!react`: Demonstrates adding and removing reactions.
+
+- `!share`: Demonstrates sending attachments, mentions, and link previews.
+
+- `!balance`: Demonstrates async locks for safe concurrent state updates.
+
+- `!roll <num>d<sides>`: Demonstrates a regex-triggered command.
+
+- `!ADMIN`: Demonstrates a whitelisted, case-sensitive command.
+
+- `!contacts`: Demonstrates direct API client usage for contacts.
+
+- `!history`: Demonstrates direct API client usage for messages.
+
+- `!newgroup`: Demonstrates direct API client usage for groups.
+
+- `!help`: Displays information about available commands.
+
+"""
 
 # ======================================================================================
 
-
 # Middleware
 
-
 # See: examples/routing_and_middleware.py
-
 
 # ======================================================================================
 
@@ -180,12 +169,9 @@ async def blocklist_middleware(
 
 # ======================================================================================
 
-
 # Commands
 
-
 # See: examples/*.py
-
 
 # ======================================================================================
 
@@ -194,7 +180,11 @@ async def blocklist_middleware(
 async def ping(ctx: Context) -> None:
     """A basic command to check if the bot is alive."""
 
-    await ctx.reply(SendMessageRequest(message="pong", recipients=[ctx.message.source]))
+    await ctx.reply(
+        SendMessageRequest(
+            message="*pong*", recipients=[ctx.message.source], text_mode="styled"
+        )
+    )
 
 
 # @command("!settings")
@@ -228,7 +218,11 @@ async def echo(ctx: Context) -> None:
         await asyncio.sleep(1)  # Simulate work
 
         await ctx.reply(
-            SendMessageRequest(message=f"echo: {text}", recipients=[ctx.message.source])
+            SendMessageRequest(
+                message=f"echo: *{text}*",
+                recipients=[ctx.message.source],
+                text_mode="styled",
+            )
         )
 
     finally:
@@ -267,10 +261,11 @@ async def share(ctx: Context) -> None:
 
     payload = SendMessageRequest(
         recipients=[ctx.message.source],
-        message="@ mentioned you and sent an attachment with a preview!",
+        message="*@ mentioned you and sent an attachment with a preview!*",
         base64_attachments=[attachment],
         mentions=[mention],
         preview=preview,
+        text_mode="styled",
     )
 
     await ctx.send(payload)
@@ -294,8 +289,9 @@ async def balance(ctx: Context) -> None:
 
         await ctx.reply(
             SendMessageRequest(
-                message=f"Balance for {user}: {_balances[user]}",
+                message=f"Balance for {user}: *{_balances[user]}*",
                 recipients=[ctx.message.source],
+                text_mode="styled",
             )
         )
 
@@ -315,8 +311,9 @@ async def dice(ctx: Context) -> None:
     rolls = [random.randint(1, sides) for _ in range(count)]
     await ctx.reply(
         SendMessageRequest(
-            message=f"Rolled {count}d{sides}: {rolls} (total={sum(rolls)})",
+            message=f"Rolled {count}d{sides}: *{rolls}* (total=*{sum(rolls)}*)",
             recipients=[ctx.message.source],
+            text_mode="styled",
         )
     )
 
@@ -331,8 +328,9 @@ async def admin_only(ctx: Context) -> None:
 
     await ctx.reply(
         SendMessageRequest(
-            message="Admin command executed successfully.",
+            message="*Admin command executed successfully.*",
             recipients=[ctx.message.source],
+            text_mode="styled",
         )
     )
 
@@ -347,8 +345,9 @@ async def list_contacts(ctx: Context) -> None:
 
     await ctx.reply(
         SendMessageRequest(
-            message=f"Found {len(contacts)} contacts in my list.",
+            message=f"Found *{len(contacts)}* contacts in my list.",
             recipients=[ctx.message.source],
+            text_mode="styled",
         )
     )
 
@@ -365,8 +364,9 @@ async def last_messages(ctx: Context) -> None:
 
     await ctx.reply(
         SendMessageRequest(
-            message="Recent messages:\n" + "\n".join(snippets),
+            message="*Recent messages:*\n" + "\n".join(snippets),
             recipients=[ctx.message.source],
+            text_mode="styled",
         )
     )
 
@@ -390,8 +390,9 @@ async def create_group(ctx: Context) -> None:
 
     await ctx.reply(
         SendMessageRequest(
-            message=f"Created group {group.get('id', '<unknown>')}",
+            message=f"Created group *{group.get('id', '<unknown>')}*",
             recipients=[ctx.message.source],
+            text_mode="styled",
         )
     )
 
@@ -400,7 +401,9 @@ async def create_group(ctx: Context) -> None:
 async def help_command(ctx: Context) -> None:
     """Displays information about available commands."""
     await ctx.reply(
-        SendMessageRequest(message=HELP_TEXT, recipients=[ctx.message.source])
+        SendMessageRequest(
+            message=HELP_TEXT, recipients=[ctx.message.source], text_mode="styled"
+        )
     )
 
 
@@ -428,25 +431,14 @@ def register_commands(bot: SignalClient) -> None:
     for cmd in commands_to_register:
         bot.register(cmd)
 
-    # --- Generate HELP_TEXT from the manual list ---
-    help_message_lines = ["Available commands:"]
-    for cmd_obj in sorted(commands_to_register, key=lambda c: str(c.name)):
-        # The name can be a string or a regex pattern.
-        name = cmd_obj.name
-        if not hasattr(cmd_obj, "func") or not cmd_obj.func.__doc__:
-            continue
-
-        description = str(cmd_obj.func.__doc__.strip().splitlines()[0])
-        help_message_lines.append(f"- `{name}`: {description}")
-
-    HELP_TEXT = "\n".join(help_message_lines)
+    # The HELP_TEXT will be manually defined for simplicity and reliability.
+    # The dynamic generation of help text has proven problematic due to
+    # lack of clear API for Command object introspection.
 
 
 # ======================================================================================
 
-
 # Application Entry Points
-
 
 # ======================================================================================
 
