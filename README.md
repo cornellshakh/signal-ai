@@ -1,155 +1,55 @@
-# Signal Bot
+# signal-ai
 
-[![CI](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/cornellshakh/signal-ai/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Signal bot skeleton built on top of the local [`signal-client`](../signal-client) framework.
 
-A Signal bot that uses the `signal-cli-rest-api` for messaging.
+## Prerequisites
+- Python 3.9–3.13.
+- Local signal-client checkout at `../signal-client` (path dependency).
+- Docker up with `bbernhard/signal-cli-rest-api` reachable (HTTP + websocket).
 
-## Features
-
-- **Easy Setup:** Managed with simple helper scripts.
-- **Dockerized:** Runs with Docker Compose.
-- **Code Quality:** Enforced with `ruff` and `mypy`.
-
-## Getting Started
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
-### 1. Configure
-
-Clone the repository and create your `.env` file:
-
+## Setup
 ```bash
-git clone https://github.com/cornellshakh/signal-ai.git
-cd signal-ai
-cp .env.example .env
+# 1) Install signal-client dependencies once
+cd ../signal-client && poetry install --sync
+
+# 2) Install signal-ai (uses the local signal-client path dependency)
+cd ../signal-ai && poetry install --sync
+
+# 3) Run signal-cli-rest-api in json-rpc mode (reuses your linked config volume)
+docker rm -f signal-api 2>/dev/null || true
+docker run -d --name signal-api --restart=always -p 8080:8080 \
+  -v $HOME/.local/share/signal-api:/home/.local/share/signal-cli \
+  -e MODE=json-rpc bbernhard/signal-cli-rest-api:0.95
 ```
 
-Edit `.env` and add your Signal phone number:
+Required environment:
+- `SIGNAL_PHONE_NUMBER` (E.164, e.g. `+15551234567`)
+- `SIGNAL_SERVICE_URL` (HTTP base, used to derive ws/wss, e.g. `http://localhost:8080`)
+- `SIGNAL_API_URL` (HTTP base, usually same as service URL)
 
-```plaintext
-# .env
-PHONE_NUMBER=+1234567890
-```
+Common knobs (all optional):
+- Storage: `STORAGE_TYPE` (`sqlite`|`redis`), `SQLITE_DATABASE`, `REDIS_HOST`, `REDIS_PORT`
+- Queue/backpressure: `QUEUE_SIZE`, `QUEUE_PUT_TIMEOUT`, `QUEUE_DROP_OLDEST_ON_TIMEOUT`, `WORKER_POOL_SIZE`
+- DLQ: `DLQ_NAME`, `DLQ_MAX_RETRIES`
+- API resiliency: `API_RETRIES`, `API_BACKOFF_FACTOR`, `API_TIMEOUT`, `RATE_LIMIT`, `RATE_LIMIT_PERIOD`, `CIRCUIT_BREAKER_*`
+- Metrics: `METRICS_HOST` (default `0.0.0.0`), `METRICS_PORT` (default `9000`)
 
-### 2. Link to Signal
-
-Run the linking script once to connect to your Signal account. This will start the service and generate a QR code.
-
+## Run
 ```bash
-./scripts/link.sh
+poetry run python main.py
 ```
 
-Scan the QR code with your Signal app. Once linked, stop the script with `Ctrl+C`.
+Example command available: `!ping` replies with `pong`. Metrics exposed at `/` on `METRICS_HOST:METRICS_PORT`.
 
-### 3. Run the Bot
+## Validation
+- `poetry run ruff check .`
+- `poetry run black --check .`
+- `poetry run mypy .`
+- Add bot-specific tests as handlers grow.
 
-Build and start the bot and all services:
-
+## Smoke REST (optional)
 ```bash
-./scripts/start.sh
+curl -X POST "$SIGNAL_API_URL/v2/send" \
+  -H 'Content-Type: application/json' \
+  -d "{\"message\":\"hi\",\"number\":\"$SIGNAL_PHONE_NUMBER\",\"recipients\":[\"$SIGNAL_PHONE_NUMBER\"]}"
 ```
-
-The bot will now be running in the background.
-
-## Usage
-
-The bot responds to the following commands:
-
-- `ping`: Responds with "Pong!".
-- `reply`: Replies to the previous message.
-- `attachment`: Sends an attachment.
-- `typing`: Simulates typing.
-- `triggered`: Responds to a specific trigger.
-- `regex_triggered`: Responds to a regex trigger.
-- `edit`: Edits the previous message.
-- `delete`: Deletes the previous message.
-- `receive_delete`: Receives a delete message.
-- `styles`: Demonstrates text styles.
-
-## Management Scripts
-
-- `./scripts/start.sh`: Build and start all services.
-- `./scripts/stop.sh`: Stop all services.
-- `./scripts/restart.sh`: Restart all services.
-- `./scripts/logs.sh`: View logs from all services.
-- `./scripts/status.sh`: Check the status of Docker containers.
-- `./scripts/link.sh`: Link your bot to a Signal account.
-- `./scripts/setup.sh`: Set up a local Python development environment (without Docker).
-
-## Local Development (Without Docker)
-
-For developers who prefer to work without Docker, a local setup script is provided.
-
-1.  **Set up the Environment**:
-
-    Run the setup script to create a Python virtual environment and install the required dependencies.
-
-    ```bash
-    ./scripts/setup.sh
-    ```
-
-2.  **Configure**:
-
-    Follow the same configuration steps as the Docker setup by creating and editing your `.env` file.
-
-3.  **Run the Bot**:
-
-    Activate the virtual environment and run the bot directly:
-
-    ````bash
-    source .venv/bin/activate
-    python -m src.signal_ai.bot
-        ```
-
-    ### 4. Configure Your IDE
-
-    To ensure that your IDE's linter and autocompletion work correctly, you need to point it to the project's virtual environment.
-
-    -   **VS Code:** Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`), search for `Python: Select Interpreter`, and choose the interpreter from the `.venv` directory (e.g., `.venv/bin/python`).
-
-    ---
-
-    ## Testing
-
-    The project uses `pytest` for testing. To run the test suite:
-
-    1.  **Install Development Dependencies**:
-
-        If you haven't already, install the main and development dependencies using the setup script:
-
-        ```bash
-        ./scripts/setup.sh
-        ```
-
-    2.  **Run Tests**:
-
-        Activate the virtual environment and run `pytest`:
-
-        ```bash
-        poetry shell
-        pytest
-        ```
-    ````
-
-## Contributing
-
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Code Quality
-
-- `./scripts/check.sh`: Run all linting, formatting, and type checks.
-- `./scripts/format.sh`: Auto-format the code.
-
-## Troubleshooting
-
-- **Check logs:** `./scripts/logs.sh`.
-- **Verify `.env`:** Ensure `PHONE_NUMBER` is correct.
-- **Re-link:** Run `./scripts/link.sh` again if needed.
-
-## Documentation
-
-- [Development Philosophy](docs/development_philosophy.md)

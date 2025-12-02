@@ -1,85 +1,22 @@
-[project]
+[tool.poetry]
 name = "signal-ai"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "cornellshakh",email = "kornelshakh@proton.me"}
-]
+description = "Signal bot built on top of the local signal-client."
+authors = ["signal-ai maintainers"]
 readme = "README.md"
-requires-python = ">=3.13, <4.0"
-dependencies = [
-    "aiohttp",
-    "aiosignal",
-    "annotated-types",
-    "apscheduler",
-    "attrs",
-    "frozenlist",
-    "idna",
-    "multidict",
-    "packaging",
-    "phonenumbers",
-    "propcache",
-    "python-dotenv",
-    "typing-extensions",
-    "typing-inspection",
-    "tzlocal",
-    "websockets",
-    "yarl",
-    "markitdown[all]",
-    "tinydb>=4.8.2,<5.0.0",
-    "structlog",
-    "google-generativeai",
-    "tenacity",
-    "cachetools",
-    "redis>=4.2.0",
-    "pyyaml",
-    "jinja2",
-    "sqlalchemy",
-    "pydantic-settings",
-    "dependency-injector",
-    "aiosqlite",
-    "asyncpg",
-    "psycopg2-binary",
-]
-
-[tool.poetry]
-packages = [{include = "signal_ai", from = "src"}]
+package-mode = false
 
 [tool.poetry.dependencies]
-signal-client = {path = "../signal-client", develop = true}
+python = ">=3.9,<3.14"
+signal-client = { path = "../signal-client", develop = true }
+redis = ">=5.2.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.5.5"
-mypy = "^1.10.0"
-pytest = "^8.3.2"
-pytest-asyncio = "^0.23.8"
-pytest-mock = "^3.14.0"
-aresponses = "^3.0.0"
-aiohttp = "^3.9.5"
+black = ">=24.10.0"
+ruff = ">=0.5.0"
+mypy = ">=1.10.0"
+pytest = ">=8.3.2"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.mypy]
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-testpaths = ["src/tests"]
-pythonpath = "src"
-
-[tool.ruff]
-line-length = 88
-
-[tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = []
-
-[tool.ruff.lint.per-file-ignores]
-"src/signal_ai/core/logging.py" = ["TID251"]
-
-[tool.ruff.lint.flake8-tidy-imports]
-disallowed-imports = ["logging", "TID251"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["signal_ai"]
