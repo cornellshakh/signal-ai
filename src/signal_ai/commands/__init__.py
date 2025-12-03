@@ -2,6 +2,20 @@ from __future__ import annotations
 
 from typing import Iterable
 
+from .advanced import (
+    build_identities_command,
+    build_profile_command,
+    build_quote_mentions_command,
+    build_add_sticker_pack_command,
+    build_receipt_command,
+    build_remote_delete_command,
+    build_resilience_command,
+    build_search_command,
+    build_sticker_command,
+    build_sticker_packs_command,
+    build_typing_command,
+    build_view_once_command,
+)
 from .admin import build_admin_command
 from .balance import build_balance_command
 from .contacts import build_contacts_command
@@ -34,6 +48,18 @@ def build_command_handlers(options: CommandOptions) -> Iterable[CommandHandler]:
         build_share_command(),
         build_balance_command(state),
         build_roll_command(),
+        build_identities_command(),
+        build_profile_command(),
+        build_search_command(),
+        build_sticker_packs_command(),
+        build_add_sticker_pack_command(),
+        build_view_once_command(),
+        build_quote_mentions_command(),
+        build_sticker_command(),
+        build_receipt_command(),
+        build_typing_command(),
+        build_remote_delete_command(),
+        build_resilience_command(),
         build_admin_command(options),
         build_contacts_command(options),
         build_history_command(),
