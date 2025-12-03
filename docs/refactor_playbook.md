@@ -28,7 +28,7 @@ Purpose: turn `signal-client` from a thin signal-cli-rest-api wrapper into a rob
 - [x] Add auth/header hooks for secured signal-cli-rest-api deployments. *(ClientConfig now accepts default headers + async header providers; Settings can inject Authorization and extra headers.)*
 - [x] Add per-endpoint timeouts and idempotency tokens where applicable; expose retries/backoff per client. *(Per-path timeout overrides, RequestOptions for per-call retries/backoff/headers/idempotency, Send/remote-delete support idempotency keys.)*
 - [ ] Return typed response models instead of untyped dicts; surface normalized errors with docs links.
-- [ ] Wire rate limiter and circuit breaker state to ingest: when APIs are throttled or open, slow/stop intake and surface metrics.
+- [x] Wire rate limiter and circuit breaker state to ingest: when APIs are throttled or open, slow/stop intake and surface metrics. *(Circuit breaker pauses intake on open; rate limiter now pauses ingest for observed wait durations and records pause metrics.)*
 
 ## Context and helper ergonomics
 - [ ] Add high-level helpers for media (download + send), mentions/quotes for edited messages, stickers, view-once, link previews with safe defaults.
@@ -37,8 +37,8 @@ Purpose: turn `signal-client` from a thin signal-cli-rest-api wrapper into a rob
 - [x] Expose a simple middleware API for before/after hooks (logging, auth, quota). *(SignalClient.use registers middleware; worker pool runs middleware chain around handlers.)*
 
 ## Observability and ops
-- [ ] Add metrics for websocket lifecycle (connect, reconnects, failures), command latency/success/failure, DLQ enqueue/replay results, queue depth per shard, and backpressure pauses.
-- [ ] Add structured logs with message IDs, conversation IDs, command names, and decision points (drops, retries, DLQ, pauses).
+- [x] Add metrics for websocket lifecycle (connect, reconnects, failures), command latency/success/failure, DLQ enqueue/replay results, queue depth per shard, and backpressure pauses. *(Websocket connection state/events, command latency/outcomes, DLQ enqueue/pending/ready/discarded counters, shard depth gauges, and existing ingest pause counters now exposed.)*
+- [x] Add structured logs with message IDs, conversation IDs, command names, and decision points (drops, retries, DLQ, pauses). *(Worker logging now binds message/conversation context, logs DLQ enqueues and command skips, and API client retries emit structured events; intake pauses remain logged with reasons.)*
 - [ ] Provide readiness/liveness endpoints and a CLI command to inspect health and DLQ status.
 
 ## Testing and tooling
