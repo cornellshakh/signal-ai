@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable, Coroutine
+from typing import Awaitable, Callable, Coroutine
 
 import structlog
 
@@ -10,11 +10,15 @@ from signal_client.services.dead_letter_queue import DeadLetterQueue
 
 log = structlog.get_logger()
 
-MiddlewareCallable = Callable[[Context, Callable[[Context], Coroutine]], Coroutine]
+MiddlewareCallable = Callable[
+    [Context, Callable[[Context], Awaitable[None]]], Awaitable[None]
+]
 
 
 def dlq_middleware(dlq: DeadLetterQueue | None) -> MiddlewareCallable:
-    async def middleware(ctx: Context, next_callable):  # type: ignore[no-untyped-def]
+    async def middleware(
+        ctx: Context, next_callable: Callable[[Context], Awaitable[None]]
+    ) -> None:
         try:
             await next_callable(ctx)
         except Exception as exc:  # noqa: BLE001
@@ -38,7 +42,9 @@ def dlq_middleware(dlq: DeadLetterQueue | None) -> MiddlewareCallable:
     return middleware
 
 
-async def timing_middleware(ctx: Context, next_callable) -> None:  # type: ignore[no-untyped-def]
+async def timing_middleware(
+    ctx: Context, next_callable: Callable[[Context], Awaitable[None]]
+) -> None:
     started = time.perf_counter()
     await next_callable(ctx)
     elapsed_ms = (time.perf_counter() - started) * 1000
@@ -51,7 +57,9 @@ async def timing_middleware(ctx: Context, next_callable) -> None:  # type: ignor
 
 
 def blocklist_middleware(blocklist: set[str]) -> MiddlewareCallable:
-    async def middleware(ctx: Context, next_callable):  # type: ignore[no-untyped-def]
+    async def middleware(
+        ctx: Context, next_callable: Callable[[Context], Awaitable[None]]
+    ) -> None:
         if ctx.message.source in blocklist:
             log.info("command.blocked", source=ctx.message.source)
             return

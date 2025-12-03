@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable
 
-from signal_client import Context
+from signal_client.command import Command
 
-CommandHandler = Callable[[Context], Awaitable[None]]
+CommandHandler = Command
 
 
 @dataclass(slots=True)
