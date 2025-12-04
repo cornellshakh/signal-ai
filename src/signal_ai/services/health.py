@@ -11,6 +11,8 @@ import structlog
 from signal_client import SignalClient
 from signal_client.config import Settings
 
+from ..config import AppConfig
+
 log = structlog.get_logger()
 
 
@@ -82,3 +84,43 @@ async def warm_api_session(bot: SignalClient) -> None:
         return
     elapsed_ms = (time.perf_counter() - started) * 1000
     log.info("signal_ai.warmup", elapsed_ms=elapsed_ms)
+
+
+async def report_status(config: AppConfig) -> None:
+    settings = Settings.from_sources(config={})
+    http_health_ok = True
+    try:
+        await health_check(settings, timeout=config.health_timeout)
+    except Exception as exc:  # noqa: BLE001
+        http_health_ok = False
+        log.error("signal_ai.health_check_failed", error=str(exc))
+
+    dlq_enabled = False
+    dlq_depth = 0
+    ingest_paused_until: float | None = None
+    persistent_queue_enabled = False
+
+    async with SignalClient(config={}) as bot:
+        dlq = bot.app.dead_letter_queue
+        if dlq is not None:
+            dlq_enabled = True
+            entries = await dlq.inspect()
+            dlq_depth = len(entries)
+        if bot.app.intake_controller is not None:
+            snapshot = bot.app.intake_controller.snapshot()
+            ingest_paused_until = snapshot.get("paused_until")  # type: ignore[arg-type]
+        persistent_queue_enabled = bot.app.persistent_queue is not None
+
+    ready = http_health_ok
+    log.info(
+        "signal_ai.status",
+        ready=ready,
+        http_health_ok=http_health_ok,
+        dlq_enabled=dlq_enabled,
+        dlq_depth=dlq_depth,
+        ingest_paused_until=ingest_paused_until,
+        persistent_queue_enabled=persistent_queue_enabled,
+    )
+    if not ready:
+        message = "Health check failed"
+        raise RuntimeError(message)

@@ -39,7 +39,7 @@ Purpose: turn `signal-client` from a thin signal-cli-rest-api wrapper into a rob
 ## Observability and ops
 - [x] Add metrics for websocket lifecycle (connect, reconnects, failures), command latency/success/failure, DLQ enqueue/replay results, queue depth per shard, and backpressure pauses. *(Websocket connection state/events, command latency/outcomes, DLQ enqueue/pending/ready/discarded counters, shard depth gauges, and existing ingest pause counters now exposed.)*
 - [x] Add structured logs with message IDs, conversation IDs, command names, and decision points (drops, retries, DLQ, pauses). *(Worker logging now binds message/conversation context, logs DLQ enqueues and command skips, and API client retries emit structured events; intake pauses remain logged with reasons.)*
-- [ ] Provide readiness/liveness endpoints and a CLI command to inspect health and DLQ status.
+- [x] Provide readiness/liveness endpoints and a CLI command to inspect health and DLQ status. *(New `HealthServer` exposes `/live`, `/ready`, `/dlq`; signal-ai CLI supports `--status` for health+DLQ inspection and can start the health server via `--health-host/--health-port`.)*
 
 ## Testing and tooling
 - [ ] Ship fakes/mocks: in-memory websocket event source and fake REST clients to run handlers without a live Signal backend.

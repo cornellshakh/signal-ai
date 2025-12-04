@@ -5,12 +5,18 @@ import structlog
 from signal_client import SignalClient
 from signal_client.config import Settings
 from signal_client.metrics_server import start_metrics_server
+from signal_client.health_server import start_health_server, HealthServer
 
 from .commands import CommandOptions, build_command_handlers
 from .config import AppConfig
 from .middlewares import blocklist_middleware, dlq_middleware, timing_middleware
 from .services.dlq import replay_dlq_once
-from .services.health import ensure_signal_api_running, health_check, warm_api_session
+from .services.health import (
+    ensure_signal_api_running,
+    health_check,
+    report_status,
+    warm_api_session,
+)
 
 log = structlog.get_logger()
 
@@ -49,6 +55,7 @@ async def _run_bot(config: AppConfig) -> None:
     if config.start_metrics_server:
         start_metrics_server(port=config.metrics_port, addr=config.metrics_host)
 
+    health_server: HealthServer | None = None
     async with SignalClient(config=overrides) as bot:
         _startup_log(bot.settings, bot.app.dead_letter_queue is not None)
         if single_number_mode:
@@ -72,10 +79,24 @@ async def _run_bot(config: AppConfig) -> None:
         bot.use(blocklist_middleware(config.blocklist))
         bot.use(timing_middleware)
 
-        await bot.start()
+        if config.start_health_server:
+            health_server = await start_health_server(
+                bot.app,
+                host=config.health_host,
+                port=config.health_port,
+            )
+
+        try:
+            await bot.start()
+        finally:
+            if health_server is not None:
+                await health_server.stop()
 
 
 async def run(config: AppConfig) -> None:
+    if config.status_only:
+        await report_status(config)
+        return
     if config.replay_dlq:
         await replay_dlq_once()
         return

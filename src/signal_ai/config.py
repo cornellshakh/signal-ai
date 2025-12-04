@@ -17,12 +17,16 @@ class AppConfig:
     replay_dlq: bool
     metrics_host: str
     metrics_port: int
+    health_host: str
+    health_port: int
     health_timeout: float
     blocklist: set[str]
     faulty_contacts_base_url: str
     auto_start_signal_api: bool
     warm_api_session: bool
     start_metrics_server: bool
+    start_health_server: bool
+    status_only: bool
     secondary_member: str | None
     admin_number: str | None
 
@@ -44,6 +48,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=int,
         default=int(os.environ.get("METRICS_PORT", "9000")),
         help="Port for Prometheus metrics.",
+    )
+    parser.add_argument(
+        "--health-host",
+        default=os.environ.get("HEALTH_SERVER_HOST", "0.0.0.0"),
+        help="Host for readiness/liveness server.",
+    )
+    parser.add_argument(
+        "--health-port",
+        type=int,
+        default=int(os.environ.get("HEALTH_SERVER_PORT", "8081")),
+        help="Port for readiness/liveness server.",
     )
     parser.add_argument(
         "--health-timeout",
@@ -77,6 +92,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Do not start the embedded Prometheus metrics server.",
     )
     parser.add_argument(
+        "--no-health-server",
+        action="store_true",
+        help="Do not start the readiness/liveness server.",
+    )
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help="Inspect health and DLQ status then exit.",
+    )
+    parser.add_argument(
         "--secondary-member",
         default=os.environ.get("SECONDARY_MEMBER"),
         help="Optional second member used for group creation validation.",
@@ -94,12 +119,16 @@ def load_config(args: argparse.Namespace) -> AppConfig:
         replay_dlq=bool(args.replay_dlq),
         metrics_host=str(args.metrics_host),
         metrics_port=int(args.metrics_port),
+        health_host=str(args.health_host),
+        health_port=int(args.health_port),
         health_timeout=float(args.health_timeout),
         blocklist=_parse_blocklist(args.blocklist),
         faulty_contacts_base_url=str(args.faulty_contacts_base_url),
         auto_start_signal_api=not bool(args.no_api_autostart),
         warm_api_session=not bool(args.no_warmup),
         start_metrics_server=not bool(args.no_metrics),
+        start_health_server=not bool(args.no_health_server),
+        status_only=bool(args.status),
         secondary_member=str(args.secondary_member) if args.secondary_member else None,
         admin_number=str(args.admin_number) if args.admin_number else None,
     )
