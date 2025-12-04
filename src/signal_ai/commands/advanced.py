@@ -420,7 +420,7 @@ def build_resilience_command() -> CommandHandler:
         attempts = 3
         durations: list[float] = []
         for _ in range(attempts):
-            start = time.monotonic()
+            start = time.monotonic()w
             result = await safe_api_call(ctx, "health", ctx.general.get_health())
             if result is None:
                 return
